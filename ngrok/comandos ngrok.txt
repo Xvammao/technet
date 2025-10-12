@@ -1,0 +1,14 @@
+AGREGAR EL TOKEN DE ACCESO 
+
+.\ngrok.exe config add-authtoken 2xXxaOgjxa2hTlybP7DQMg7JDCF_2UuJSTAcKpS5gqbmgm1bY
+
+
+ADJUNTAR EL PUERTO AL CUAL VAMOS ACCEDER PUBLICAMENTE
+
+.\ngrok.exe http 8080
+
+COMANDO PARA EJECUTAR EN LA MISMA CARPETA EN LA QUE ESTA EL NGROK.EXE 
+
+.\ngrok.exe start --all --config ngrok.yml
+
+
