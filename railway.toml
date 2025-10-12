@@ -1,0 +1,5 @@
+# Configuración Railway para Monorepo
+# Este archivo indica que hay múltiples servicios en el repositorio
+
+[build]
+# Railway detectará automáticamente cada servicio por su railway.json
