@@ -65,6 +65,9 @@ export interface Tecnico {
   nombre: string;
   apellido: string;
   id_tecnico: string;
+  cedula?: string;
+  telefono?: string;
+  email?: string;
 }
 
 export interface TipoOrden {

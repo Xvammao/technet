@@ -34,6 +34,9 @@ export default function Tecnicos() {
     nombre: '',
     apellido: '',
     id_tecnico: '',
+    cedula: '',
+    telefono: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -84,6 +87,9 @@ export default function Tecnicos() {
       nombre: item.nombre,
       apellido: item.apellido,
       id_tecnico: item.id_tecnico,
+      cedula: item.cedula || '',
+      telefono: item.telefono || '',
+      email: item.email || '',
     });
     setIsDialogOpen(true);
   };
@@ -94,6 +100,7 @@ export default function Tecnicos() {
     setFormData({
       nombre: '',
       apellido: '',
+      id_tecnico: '',
       cedula: '',
       telefono: '',
       email: '',
