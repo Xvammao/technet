@@ -1,41 +1,67 @@
-# 🚀 GUÍA SIMPLE - Desplegar en Railway
+# 🚀 GUÍA SIMPLE - Desplegar en Railway (DESDE CERO)
 
-## ✅ LO QUE YA HICISTE
+## ✅ PREREQUISITOS
 
-1. ✅ Código subido a GitHub
-2. ✅ Servicio "web" creado (Frontend)
-3. ✅ Servicio "technet" creado (Backend)
-4. ✅ PostgreSQL creado
+1. ✅ Código subido a GitHub: `https://github.com/Xvammao/tehnet`
+2. ✅ Cuenta en Railway: `https://railway.app`
 
 ---
 
-## 🎯 LO QUE FALTA HACER
+## 🎯 PASOS COMPLETOS
 
-### PASO 1: Configurar el Backend
+### PASO 1: Crear Proyecto en Railway
 
-1. Ve a Railway → Servicio **"technet"**
-2. Click en **Settings**
-3. Busca **Root Directory** y ponlo en: `/technet`
-4. Guarda
+1. Ve a [railway.app/dashboard](https://railway.app/dashboard)
+2. Click en **"New Project"**
+3. Selecciona **"Empty Project"**
+4. Dale un nombre (ejemplo: "TechNet")
 
-### PASO 2: Configurar el Frontend
+### PASO 2: Agregar PostgreSQL
 
-1. Ve a Railway → Servicio **"web"**
-2. Click en **Settings**
-3. Busca **Root Directory** y ponlo en: `/frontend`
-4. Guarda
+1. Dentro del proyecto, click en **"+ Create"**
+2. Selecciona **"Database"**
+3. Selecciona **"Add PostgreSQL"**
+4. Espera a que se cree (toma unos segundos)
 
-### PASO 3: Conectar PostgreSQL al Backend
+### PASO 3: Crear Servicio Backend
 
-1. Ve a Railway → Servicio **"technet"**
-2. Click en **Variables**
-3. Click en **New Variable** → **Add Reference**
-4. Selecciona **Postgres**
+1. Click en **"+ Create"**
+2. Selecciona **"GitHub Repo"**
+3. Selecciona tu repositorio: **"Xvammao/tehnet"**
+4. Railway creará un servicio
+
+**Configurar el servicio:**
+1. Click en el servicio que se creó
+2. Ve a **"Settings"**
+3. En **"Service Name"** ponlo: `backend`
+4. Busca **"Root Directory"** y ponlo en: `/technet`
+5. Guarda los cambios
+
+### PASO 4: Crear Servicio Frontend
+
+1. Click en **"+ Create"**
+2. Selecciona **"GitHub Repo"**
+3. Selecciona **EL MISMO repositorio**: **"Xvammao/tehnet"**
+4. Railway creará otro servicio
+
+**Configurar el servicio:**
+1. Click en el servicio que se creó
+2. Ve a **"Settings"**
+3. En **"Service Name"** ponlo: `frontend`
+4. Busca **"Root Directory"** y ponlo en: `/frontend`
+5. Guarda los cambios
+
+### PASO 5: Conectar PostgreSQL al Backend
+
+1. Click en el servicio **"backend"**
+2. Ve a **"Variables"**
+3. Click en **"New Variable"** → **"Add Reference"**
+4. Selecciona **"Postgres"**
 5. Railway agregará `DATABASE_URL` automáticamente
 
-### PASO 4: Agregar Variables del Backend
+### PASO 6: Agregar Variables del Backend
 
-En **technet** → **Variables**, agrega estas **una por una**:
+En el servicio **"backend"** → **"Variables"**, agrega estas **una por una**:
 
 ```
 SECRET_KEY=trx2gewy5u84sxs7yr-q1haymvcr4f8frteez8
@@ -45,44 +71,53 @@ CORS_ALLOW_ALL_ORIGINS=False
 PYTHONUNBUFFERED=1
 ```
 
-### PASO 5: Esperar a que Backend Despliegue
+### PASO 7: Esperar Despliegues
 
-Espera a que el servicio "technet" termine de desplegar (verás "Deployment successful").
+Espera a que ambos servicios terminen de desplegar:
+- **backend**: Verás "Deployment successful" ✅
+- **frontend**: Verás "Deployment successful" ✅
 
-### PASO 6: Obtener URL del Backend
+Esto puede tomar 2-5 minutos.
 
-1. Ve al servicio **"technet"**
-2. Arriba verás una URL como: `https://technet-production-xxxx.railway.app`
-3. **COPIA ESA URL**
+### PASO 8: Obtener URL del Backend
 
-### PASO 7: Configurar Frontend
+1. Click en el servicio **"backend"**
+2. En la parte superior verás una URL como: `https://backend-production-xxxx.railway.app`
+3. **COPIA ESA URL COMPLETA**
 
-1. Ve al servicio **"web"**
-2. Click en **Variables**
+### PASO 9: Configurar Variables del Frontend
+
+1. Click en el servicio **"frontend"**
+2. Ve a **"Variables"**
+3. Agrega estas variables:
+
+**Variable 1:**
+- VARIABLE_NAME: `VITE_API_URL`
+- VALUE: `<pega-la-url-del-backend-aqui>`
+- Click **Add**
+
+**Variable 2:**
+- VARIABLE_NAME: `NODE_ENV`
+- VALUE: `production`
+- Click **Add**
+
+### PASO 10: Obtener URL del Frontend
+
+1. Click en el servicio **"frontend"**
+2. En la parte superior verás una URL como: `https://frontend-production-xxxx.railway.app`
+3. **COPIA ESA URL COMPLETA**
+
+### PASO 11: Actualizar CORS del Backend
+
+1. Click en el servicio **"backend"**
+2. Ve a **"Variables"**
 3. Agrega:
 
-```
-VITE_API_URL=<pega-la-url-del-backend-aqui>
-NODE_ENV=production
-```
+- VARIABLE_NAME: `CORS_ALLOWED_ORIGINS`
+- VALUE: `<pega-la-url-del-frontend-aqui>`
+- Click **Add**
 
-### PASO 8: Obtener URL del Frontend
-
-1. Ve al servicio **"web"**
-2. Arriba verás una URL como: `https://web-production-xxxx.railway.app`
-3. **COPIA ESA URL**
-
-### PASO 9: Actualizar CORS del Backend
-
-1. Ve al servicio **"technet"**
-2. Click en **Variables**
-3. Agrega:
-
-```
-CORS_ALLOWED_ORIGINS=<pega-la-url-del-frontend-aqui>
-```
-
-### PASO 10: Importar Base de Datos
+### PASO 12: Importar Base de Datos
 
 Abre PowerShell y ejecuta:
 
@@ -92,43 +127,46 @@ cd c:\Users\maog9\OneDrive\Escritorio\TELECOMUNICACIONES\technet
 ```
 
 El script te guiará para:
-- Instalar Railway CLI
-- Iniciar sesión
-- Vincular proyecto
-- Importar tu backup SQL
+1. Instalar Railway CLI (si no está instalado)
+2. Iniciar sesión en Railway
+3. Vincular al proyecto (selecciona el servicio **backend**)
+4. Seleccionar tu archivo .sql
+5. Importar los datos automáticamente
 
 ---
 
 ## 🎉 ¡LISTO!
 
 Tu aplicación estará funcionando en:
-- **Backend:** `https://technet-production-xxxx.railway.app`
-- **Frontend:** `https://web-production-xxxx.railway.app`
+- **Backend:** `https://backend-production-xxxx.railway.app`
+- **Frontend:** `https://frontend-production-xxxx.railway.app`
 
 ---
 
-## 📝 RESUMEN VISUAL
+## 📝 RESUMEN DE LOS 12 PASOS
 
 ```
-1. technet → Settings → Root Directory = /technet
-2. web → Settings → Root Directory = /frontend
-3. technet → Variables → Add Reference → Postgres
-4. technet → Variables → Agregar SECRET_KEY, DEBUG, etc.
-5. Copiar URL de technet
-6. web → Variables → VITE_API_URL = URL de technet
-7. Copiar URL de web
-8. technet → Variables → CORS_ALLOWED_ORIGINS = URL de web
-9. Ejecutar: .\importar_sql_railway.ps1
-10. ¡Probar la aplicación!
+1. Crear proyecto vacío en Railway
+2. Agregar PostgreSQL
+3. Crear servicio backend (repo + Root Directory: /technet)
+4. Crear servicio frontend (mismo repo + Root Directory: /frontend)
+5. Conectar Postgres al backend
+6. Agregar variables del backend (SECRET_KEY, DEBUG, etc.)
+7. Esperar a que desplieguen
+8. Copiar URL del backend
+9. Agregar variables del frontend (VITE_API_URL, NODE_ENV)
+10. Copiar URL del frontend
+11. Agregar CORS_ALLOWED_ORIGINS al backend
+12. Importar base de datos con el script
 ```
 
 ---
 
 ## ⏱️ Tiempo Estimado
 
-- Pasos 1-9: **15 minutos**
-- Paso 10 (importar DB): **5-10 minutos**
-- **Total: 20-25 minutos**
+- Pasos 1-11: **20 minutos**
+- Paso 12 (importar DB): **5-10 minutos**
+- **Total: 25-30 minutos**
 
 ---
 
