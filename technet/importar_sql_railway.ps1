@@ -96,7 +96,7 @@ if ($LASTEXITCODE -eq 0) {
     
     Write-Host "`n📝 Próximos pasos:" -ForegroundColor Yellow
     Write-Host "1. Verificar los datos:"
-    Write-Host "   railway run psql `$DATABASE_URL -c 'SELECT COUNT(*) FROM configuracion_instalacion;'"
+    Write-Host '   railway run psql $DATABASE_URL -c "SELECT COUNT(*) FROM configuracion_instalacion;"'
     Write-Host ""
     Write-Host "2. Crear superusuario (si es necesario):"
     Write-Host "   railway run python manage.py createsuperuser"
