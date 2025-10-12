@@ -15,6 +15,7 @@ export default defineConfig({
     allowedHosts: [
       '.ngrok-free.app', // Permite todos los subdominios de ngrok
       '.ngrok.io',
+      '.railway.app', // Permite todos los subdominios de Railway
       'localhost',
     ],
     proxy: {
@@ -24,5 +25,11 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '/technet')
       }
     }
+  },
+  preview: {
+    host: true,
+    allowedHosts: [
+      '.railway.app', // Permite Railway en preview/production
+    ]
   }
 })
