@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { Acometida } from '@/types';
 import { exportToExcel } from '@/lib/exportToExcel';
@@ -30,6 +31,9 @@ export default function Acometidas() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Acometida | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [formData, setFormData] = useState({
     nombre_acometida: '',
     precio: '',
@@ -37,12 +41,18 @@ export default function Acometidas() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
-      const response = await api.get<Acometida[]>(endpoints.acometidas);
-      setAcometidas(response.data || []);
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await api.get(endpoints.acometidas, { params });
+      setAcometidas(response.data.results || []);
+      setTotalCount(response.data.count || 0);
+      setTotalPages(Math.ceil((response.data.count || 0) / 20));
     } catch (error) {
       console.error('Error loading acometidas:', error);
       setAcometidas([]);
@@ -93,7 +103,7 @@ export default function Acometidas() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredAcometidas.map((aco) => ({
+    const dataToExport = acometidas.map((aco) => ({
       'Nombre Acometida': aco.nombre_acometida,
       'Precio': parseFloat(aco.precio),
     }));
@@ -102,9 +112,10 @@ export default function Acometidas() {
     exportToExcel(dataToExport, filename, 'Acometidas');
   };
 
-  const filteredAcometidas = acometidas.filter((ac) =>
-    ac.nombre_acometida.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
+  };
 
   if (loading) {
     return (
@@ -158,7 +169,7 @@ export default function Acometidas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAcometidas.map((acometida) => (
+              {acometidas.map((acometida) => (
                 <TableRow key={acometida.id_acometida}>
                   <TableCell className="font-medium">{acometida.id_acometida}</TableCell>
                   <TableCell>{acometida.nombre_acometida}</TableCell>
@@ -187,6 +198,13 @@ export default function Acometidas() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 

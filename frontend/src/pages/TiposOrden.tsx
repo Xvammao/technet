@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { TipoOrden } from '@/types';
 import { exportToExcel } from '@/lib/exportToExcel';
@@ -30,6 +31,9 @@ export default function TiposOrden() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TipoOrden | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [formData, setFormData] = useState({
     nombre_orden: '',
     valor_orden: '',
@@ -38,12 +42,18 @@ export default function TiposOrden() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
-      const response = await api.get<TipoOrden[]>(endpoints.tipodeordenes);
-      setTiposOrden(response.data || []);
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await api.get(endpoints.tipodeordenes, { params });
+      setTiposOrden(response.data.results || []);
+      setTotalCount(response.data.count || 0);
+      setTotalPages(Math.ceil((response.data.count || 0) / 20));
     } catch (error) {
       console.error('Error loading tipos de orden:', error);
       setTiposOrden([]);
@@ -95,7 +105,7 @@ export default function TiposOrden() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredTiposOrden.map((tipo) => ({
+    const dataToExport = tiposOrden.map((tipo) => ({
       'Nombre Orden': tipo.nombre_orden,
       'Valor Orden': parseFloat(tipo.valor_orden),
       'Valor Orden Empresa': parseFloat(tipo.valor_orden_empresa),
@@ -105,9 +115,10 @@ export default function TiposOrden() {
     exportToExcel(dataToExport, filename, 'Tipos de Orden');
   };
 
-  const filteredTiposOrden = tiposOrden.filter((tipo) =>
-    tipo.nombre_orden.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
+  };
 
   if (loading) {
     return (
@@ -162,7 +173,7 @@ export default function TiposOrden() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTiposOrden.map((tipo) => (
+              {tiposOrden.map((tipo) => (
                 <TableRow key={tipo.id_tipo_orden}>
                   <TableCell className="font-medium">{tipo.id_tipo_orden}</TableCell>
                   <TableCell>{tipo.nombre_orden}</TableCell>
@@ -194,6 +205,13 @@ export default function TiposOrden() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 

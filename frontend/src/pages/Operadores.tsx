@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { Operador } from '@/types';
 import { exportToExcel } from '@/lib/exportToExcel';
@@ -29,16 +30,25 @@ export default function Operadores() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Operador | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [formData, setFormData] = useState({ nombre_operador: '' });
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
-      const response = await api.get<Operador[]>(endpoints.operadores);
-      setOperadores(response.data || []);
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await api.get(endpoints.operadores, { params });
+      setOperadores(response.data.results || []);
+      setTotalCount(response.data.count || 0);
+      setTotalPages(Math.ceil((response.data.count || 0) / 20));
     } catch (error) {
       console.error('Error loading operadores:', error);
       setOperadores([]);
@@ -86,7 +96,7 @@ export default function Operadores() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredOperadores.map((op) => ({
+    const dataToExport = operadores.map((op) => ({
       'Nombre Operador': op.nombre_operador,
     }));
 
@@ -94,9 +104,10 @@ export default function Operadores() {
     exportToExcel(dataToExport, filename, 'Operadores');
   };
 
-  const filteredOperadores = operadores.filter((op) =>
-    op.nombre_operador.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
+  };
 
   if (loading) {
     return (
@@ -149,7 +160,7 @@ export default function Operadores() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOperadores.map((operador) => (
+              {operadores.map((operador) => (
                 <TableRow key={operador.id_ope}>
                   <TableCell className="font-medium">{operador.id_ope}</TableCell>
                   <TableCell>{operador.nombre_operador}</TableCell>
@@ -175,6 +186,13 @@ export default function Operadores() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 

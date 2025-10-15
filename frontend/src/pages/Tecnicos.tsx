@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { Tecnico } from '@/types';
 import { exportToExcel } from '@/lib/exportToExcel';
@@ -29,6 +30,9 @@ export default function Tecnicos() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Tecnico | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -41,12 +45,18 @@ export default function Tecnicos() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
-      const response = await api.get<Tecnico[]>(endpoints.tecnicos);
-      setTecnicos(response.data || []);
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await api.get(endpoints.tecnicos, { params });
+      setTecnicos(response.data.results || []);
+      setTotalCount(response.data.count || 0);
+      setTotalPages(Math.ceil((response.data.count || 0) / 20));
     } catch (error) {
       console.error('Error loading tecnicos:', error);
       setTecnicos([]);
@@ -108,7 +118,7 @@ export default function Tecnicos() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredTecnicos.map((tec) => ({
+    const dataToExport = tecnicos.map((tec) => ({
       'ID Técnico': tec.id_tecnico,
       'Nombre': tec.nombre,
       'Apellido': tec.apellido,
@@ -118,12 +128,10 @@ export default function Tecnicos() {
     exportToExcel(dataToExport, filename, 'Técnicos');
   };
 
-  const filteredTecnicos = tecnicos.filter(
-    (tec) =>
-      tec.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tec.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tec.id_tecnico.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
+  };
 
   if (loading) {
     return (
@@ -177,7 +185,7 @@ export default function Tecnicos() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTecnicos.map((tecnico) => (
+              {tecnicos.map((tecnico) => (
                 <TableRow key={tecnico.id_unico_tecnico}>
                   <TableCell className="font-medium">{tecnico.id_tecnico}</TableCell>
                   <TableCell>{tecnico.nombre}</TableCell>
@@ -204,6 +212,13 @@ export default function Tecnicos() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 

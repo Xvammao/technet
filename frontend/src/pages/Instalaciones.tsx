@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { Instalacion, Tecnico, Operador, TipoOrden, Dr, Acometida } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -41,6 +42,9 @@ export default function Instalaciones() {
   const [filterFechaInicio, setFilterFechaInicio] = useState('');
   const [filterFechaFin, setFilterFechaFin] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -73,24 +77,30 @@ export default function Instalaciones() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
       const [instRes, tecRes, opRes, toRes, drRes, acoRes] = await Promise.all([
-        api.get<Instalacion[]>(endpoints.instalaciones),
-        api.get<Tecnico[]>(endpoints.tecnicos),
-        api.get<Operador[]>(endpoints.operadores),
-        api.get<TipoOrden[]>(endpoints.tipodeordenes),
-        api.get<Dr[]>(endpoints.dr),
-        api.get<Acometida[]>(endpoints.acometidas),
+        api.get(endpoints.instalaciones, { params }),
+        api.get(endpoints.tecnicos, { params: { page_size: 1000 } }),
+        api.get(endpoints.operadores, { params: { page_size: 1000 } }),
+        api.get(endpoints.tipodeordenes, { params: { page_size: 1000 } }),
+        api.get(endpoints.dr, { params: { page_size: 1000 } }),
+        api.get(endpoints.acometidas, { params: { page_size: 1000 } }),
       ]);
-      setInstalaciones(instRes.data || []);
-      setTecnicos(tecRes.data || []);
-      setOperadores(opRes.data || []);
-      setTiposOrden(toRes.data || []);
-      setDrs(drRes.data || []);
-      setAcometidas(acoRes.data || []);
+      setInstalaciones(instRes.data.results || []);
+      setTotalCount(instRes.data.count || 0);
+      setTotalPages(Math.ceil((instRes.data.count || 0) / 20));
+      setTecnicos(tecRes.data.results || tecRes.data || []);
+      setOperadores(opRes.data.results || opRes.data || []);
+      setTiposOrden(toRes.data.results || toRes.data || []);
+      setDrs(drRes.data.results || drRes.data || []);
+      setAcometidas(acoRes.data.results || acoRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       // Mantener arrays vacíos en caso de error
@@ -237,7 +247,7 @@ export default function Instalaciones() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredInstalaciones.map((inst) => {
+    const dataToExport = instalaciones.map((inst) => {
       const tecnico = tecnicos.find(t => t.id_unico_tecnico === inst.id_tecnico);
       const operador = operadores.find(o => o.id_ope === inst.id_operador);
       
@@ -562,24 +572,23 @@ export default function Instalaciones() {
     });
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
+  };
+
   const filteredInstalaciones = instalaciones.filter((inst) => {
-    // Filtro de búsqueda por OT o dirección
-    const matchesSearch = 
-      inst.numero_ot.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inst.direccion.toLowerCase().includes(searchTerm.toLowerCase());
-    
     // Filtro por técnico
-    const matchesTecnico = filterTecnico === '' || inst.id_tecnico.toString() === filterTecnico;
-    
+    const matchesTecnico = !filterTecnico || inst.id_tecnico.toString() === filterTecnico;
+
     // Filtro por operador
-    const matchesOperador = filterOperador === '' || inst.id_operador.toString() === filterOperador;
-    
-    // Filtro por fecha
-    const fechaInst = new Date(inst.fecha_instalacion);
-    const matchesFechaInicio = filterFechaInicio === '' || fechaInst >= new Date(filterFechaInicio);
-    const matchesFechaFin = filterFechaFin === '' || fechaInst <= new Date(filterFechaFin);
-    
-    return matchesSearch && matchesTecnico && matchesOperador && matchesFechaInicio && matchesFechaFin;
+    const matchesOperador = !filterOperador || inst.id_operador.toString() === filterOperador;
+
+    // Filtro por rango de fechas
+    const matchesFecha = (!filterFechaInicio || inst.fecha_instalacion >= filterFechaInicio) &&
+                         (!filterFechaFin || inst.fecha_instalacion <= filterFechaFin);
+
+    return matchesTecnico && matchesOperador && matchesFecha;
   });
 
   // Calcular totales
@@ -907,6 +916,13 @@ export default function Instalaciones() {
               </TableRow>
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 

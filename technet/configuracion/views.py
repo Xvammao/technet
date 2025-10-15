@@ -4,14 +4,25 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import filters
 from django.contrib.auth import authenticate
 from . import models
 from . import serializers
+
+# Configuración de paginación
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 # Acometidas
 class AcometidasList(generics.ListCreateAPIView):
     queryset = models.Acometidas.objects.all()
     serializer_class = serializers.AcometidasSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre_acometida']
 
 class AcometidasDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Acometidas.objects.all()
@@ -21,6 +32,7 @@ class AcometidasDetail(generics.RetrieveUpdateDestroyAPIView):
 class DescuentosList(generics.ListCreateAPIView):
     queryset = models.Descuentos.objects.all()
     serializer_class = serializers.DescuentosSerializers
+    pagination_class = StandardResultsSetPagination
 
 class DescuentosDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Descuentos.objects.all()
@@ -30,6 +42,9 @@ class DescuentosDetail(generics.RetrieveUpdateDestroyAPIView):
 class DrList(generics.ListCreateAPIView):
     queryset = models.Dr.objects.all()
     serializer_class = serializers.DrSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre_dr']
 
 class DrDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Dr.objects.all()
@@ -44,6 +59,9 @@ from datetime import datetime
 class InstalacionesList(generics.ListCreateAPIView):
     queryset = models.Instalaciones.objects.all()
     serializer_class = serializers.InstalacionesSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['numero_ot', 'direccion', 'producto_serie']
     
     def perform_create(self, serializer):
         # Usar SQL crudo para evitar problemas con campos generados
@@ -260,6 +278,9 @@ def instalaciones_bulk_import(request):
 class OperadoresList(generics.ListCreateAPIView):
     queryset = models.Operadores.objects.all()
     serializer_class = serializers.OperadoresSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre_operador']
 
 class OperadoresDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Operadores.objects.all()
@@ -269,6 +290,9 @@ class OperadoresDetail(generics.RetrieveUpdateDestroyAPIView):
 class ProductosList(generics.ListCreateAPIView):
     queryset = models.Productos.objects.all()
     serializer_class = serializers.ProductosSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre_producto', 'producto_serie', 'categoria']
 
 class ProductosDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Productos.objects.all()
@@ -278,6 +302,9 @@ class ProductosDetail(generics.RetrieveUpdateDestroyAPIView):
 class TecnicosList(generics.ListCreateAPIView):
     queryset = models.Tecnicos.objects.all()
     serializer_class = serializers.TecnicosSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre', 'apellido', 'id_tecnico']
 
 class TecnicosDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Tecnicos.objects.all()
@@ -287,6 +314,9 @@ class TecnicosDetail(generics.RetrieveUpdateDestroyAPIView):
 class TipoOrdenLista(generics.ListCreateAPIView):
     queryset = models.Tipodeordenes.objects.all()
     serializer_class = serializers.TipoOrdenSerializers
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['nombre_tipo_orden']
 
 class TipoOrdenEliminar(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Tipodeordenes.objects.all()

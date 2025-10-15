@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { Producto, Tecnico } from '@/types';
 import { exportToExcel, formatDateForExcel } from '@/lib/exportToExcel';
@@ -32,6 +33,9 @@ export default function Productos() {
   const [editingItem, setEditingItem] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -45,16 +49,22 @@ export default function Productos() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
       const [prodRes, tecRes] = await Promise.all([
-        api.get<Producto[]>(endpoints.productos),
-        api.get<Tecnico[]>(endpoints.tecnicos),
+        api.get(endpoints.productos, { params }),
+        api.get(endpoints.tecnicos, { params: { page_size: 1000 } }),
       ]);
-      setProductos(prodRes.data || []);
-      setTecnicos(tecRes.data || []);
+      setProductos(prodRes.data.results || []);
+      setTotalCount(prodRes.data.count || 0);
+      setTotalPages(Math.ceil((prodRes.data.count || 0) / 20));
+      setTecnicos(tecRes.data.results || tecRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       setProductos([]);
@@ -117,7 +127,7 @@ export default function Productos() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredProductos.map((prod) => {
+    const dataToExport = productos.map((prod) => {
       const tecnico = tecnicos.find(t => t.id_unico_tecnico === prod.id_tecnico);
       return {
         'Categoría': prod.categoria,
@@ -131,6 +141,11 @@ export default function Productos() {
 
     const filename = `Productos_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
     exportToExcel(dataToExport, filename, 'Productos');
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
   };
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,19 +226,6 @@ export default function Productos() {
     }
   };
 
-  const filteredProductos = productos.filter(
-    (prod) => {
-      const tecnico = tecnicos.find(t => t.id_unico_tecnico === prod.id_tecnico);
-      const nombreTecnico = tecnico ? `${tecnico.nombre} ${tecnico.apellido}`.toLowerCase() : '';
-      
-      return (
-        prod.nombre_producto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prod.producto_serie.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prod.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        nombreTecnico.includes(searchTerm.toLowerCase())
-      );
-    }
-  );
 
   if (loading) {
     return (
@@ -296,7 +298,7 @@ export default function Productos() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProductos.map((producto) => {
+              {productos.map((producto) => {
                 const tecnico = tecnicos.find(t => t.id_unico_tecnico === producto.id_tecnico);
                 return (
                   <TableRow key={producto.id_producto}>
@@ -348,6 +350,13 @@ export default function Productos() {
               })}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 

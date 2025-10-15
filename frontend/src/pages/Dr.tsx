@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/pagination';
 import api, { endpoints } from '@/lib/api';
 import { Dr } from '@/types';
 import { exportToExcel } from '@/lib/exportToExcel';
@@ -30,6 +31,9 @@ export default function DrPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Dr | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [formData, setFormData] = useState({
     nombre_dr: '',
     valor_dr: '',
@@ -38,12 +42,18 @@ export default function DrPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   const loadData = async () => {
     try {
-      const response = await api.get<Dr[]>(endpoints.dr);
-      setDrs(response.data || []);
+      const params: any = { page: currentPage };
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      const response = await api.get(endpoints.dr, { params });
+      setDrs(response.data.results || []);
+      setTotalCount(response.data.count || 0);
+      setTotalPages(Math.ceil((response.data.count || 0) / 20));
     } catch (error) {
       console.error('Error loading DR:', error);
       setDrs([]);
@@ -95,7 +105,7 @@ export default function DrPage() {
   };
 
   const handleExportToExcel = () => {
-    const dataToExport = filteredDrs.map((dr) => ({
+    const dataToExport = drs.map((dr) => ({
       'Nombre DR': dr.nombre_dr,
       'Valor DR': parseFloat(dr.valor_dr),
       'Valor DR Empresa': parseFloat(dr.valor_dr_empresa),
@@ -105,9 +115,10 @@ export default function DrPage() {
     exportToExcel(dataToExport, filename, 'DR');
   };
 
-  const filteredDrs = drs.filter((dr) =>
-    dr.nombre_dr.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setLoading(true);
+  };
 
   if (loading) {
     return (
@@ -162,7 +173,7 @@ export default function DrPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDrs.map((dr) => (
+              {drs.map((dr) => (
                 <TableRow key={dr.id_dr}>
                   <TableCell className="font-medium">{dr.id_dr}</TableCell>
                   <TableCell>{dr.nombre_dr}</TableCell>
@@ -194,6 +205,13 @@ export default function DrPage() {
               ))}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            totalItems={totalCount}
+            itemsPerPage={20}
+          />
         </CardContent>
       </Card>
 
