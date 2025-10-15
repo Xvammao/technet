@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Cable, Users, Package, TrendingUp } from 'lucide-react';
 import api, { endpoints } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import { Instalacion, Tecnico, Producto } from '@/types';
+import { Instalacion, Producto } from '@/types';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
