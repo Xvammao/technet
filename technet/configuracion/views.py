@@ -63,6 +63,30 @@ class InstalacionesList(generics.ListCreateAPIView):
     filter_backends = [filters.SearchFilter]
     search_fields = ['numero_ot', 'direccion', 'producto_serie']
     
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtro por técnico
+        id_tecnico = self.request.query_params.get('id_tecnico', None)
+        if id_tecnico:
+            queryset = queryset.filter(id_tecnico=id_tecnico)
+        
+        # Filtro por operador
+        id_operador = self.request.query_params.get('id_operador', None)
+        if id_operador:
+            queryset = queryset.filter(id_operador=id_operador)
+        
+        # Filtro por rango de fechas
+        fecha_inicio = self.request.query_params.get('fecha_inicio', None)
+        fecha_fin = self.request.query_params.get('fecha_fin', None)
+        
+        if fecha_inicio:
+            queryset = queryset.filter(fecha_instalacion__gte=fecha_inicio)
+        if fecha_fin:
+            queryset = queryset.filter(fecha_instalacion__lte=fecha_fin)
+        
+        return queryset.order_by('-fecha_instalacion')
+    
     def perform_create(self, serializer):
         # Usar SQL crudo para evitar problemas con campos generados
         data = serializer.validated_data

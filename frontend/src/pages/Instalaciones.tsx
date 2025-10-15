@@ -77,7 +77,7 @@ export default function Instalaciones() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, filterTecnico, filterOperador, filterFechaInicio, filterFechaFin]);
 
   const loadData = async () => {
     try {
@@ -85,6 +85,20 @@ export default function Instalaciones() {
       if (searchTerm) {
         params.search = searchTerm;
       }
+      // Aplicar filtros del backend
+      if (filterTecnico) {
+        params.id_tecnico = filterTecnico;
+      }
+      if (filterOperador) {
+        params.id_operador = filterOperador;
+      }
+      if (filterFechaInicio) {
+        params.fecha_inicio = filterFechaInicio;
+      }
+      if (filterFechaFin) {
+        params.fecha_fin = filterFechaFin;
+      }
+      
       const [instRes, tecRes, opRes, toRes, drRes, acoRes] = await Promise.all([
         api.get(endpoints.instalaciones, { params }),
         api.get(endpoints.tecnicos, { params: { page_size: 1000 } }),
@@ -248,9 +262,18 @@ export default function Instalaciones() {
 
   const handleExportToExcel = async () => {
     try {
-      // Obtener TODOS los datos sin paginación para exportar
+      // Construir parámetros con los filtros activos
+      const params: any = { page_size: 10000 };
+      if (searchTerm) params.search = searchTerm;
+      if (filterTecnico) params.id_tecnico = filterTecnico;
+      if (filterOperador) params.id_operador = filterOperador;
+      if (filterFechaInicio) params.fecha_inicio = filterFechaInicio;
+      if (filterFechaFin) params.fecha_fin = filterFechaFin;
+      
+      // Obtener TODOS los datos filtrados para exportar
       const response = await api.get<{ results: Instalacion[] }>(
-        `${endpoints.instalaciones}?page_size=10000`
+        endpoints.instalaciones,
+        { params }
       );
       
       const allInstalaciones = response.data.results || response.data;
@@ -739,6 +762,8 @@ export default function Instalaciones() {
                     setFilterOperador('');
                     setFilterFechaInicio('');
                     setFilterFechaFin('');
+                    setSearchTerm('');
+                    setCurrentPage(1);
                   }}
                   className="h-8"
                 >

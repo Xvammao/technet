@@ -27,11 +27,11 @@ export default function Dashboard() {
     try {
       console.log('Cargando datos del dashboard...');
       
-      // Cargar datos paginados - necesitamos obtener todos los datos para las estadísticas
+      // Obtener conteos totales y datos recientes
       const [instalacionesRes, tecnicosRes, productosRes] = await Promise.all([
-        api.get(endpoints.instalaciones + '?page_size=1000'), // Obtener más datos para estadísticas
-        api.get(endpoints.tecnicos + '?page_size=1000'),
-        api.get(endpoints.productos + '?page_size=1000'),
+        api.get(endpoints.instalaciones + '?page_size=10000'), // Obtener TODOS los datos
+        api.get(endpoints.tecnicos + '?page_size=10000'),
+        api.get(endpoints.productos + '?page_size=10000'),
       ]);
 
       console.log('Datos recibidos:', {
@@ -40,18 +40,26 @@ export default function Dashboard() {
         productos: productosRes.data
       });
 
-      // Manejar respuesta paginada o array directo
-      const instalaciones = Array.isArray(instalacionesRes.data) 
-        ? instalacionesRes.data 
-        : instalacionesRes.data?.results || [];
+      // Manejar respuesta paginada - usar count si está disponible
+      const instalacionesData = instalacionesRes.data;
+      const tecnicosData = tecnicosRes.data;
+      const productosData = productosRes.data;
       
-      const tecnicos = Array.isArray(tecnicosRes.data)
-        ? tecnicosRes.data
-        : tecnicosRes.data?.results || [];
+      // Usar el count de la respuesta paginada para totales exactos
+      const totalInstalaciones = instalacionesData.count || instalacionesData.results?.length || instalacionesData.length || 0;
+      const totalTecnicos = tecnicosData.count || tecnicosData.results?.length || tecnicosData.length || 0;
       
-      const productos = Array.isArray(productosRes.data)
-        ? productosRes.data
-        : productosRes.data?.results || [];
+      // Para productos, necesitamos los datos completos para sumar cantidades
+      const productos = Array.isArray(productosData)
+        ? productosData
+        : productosData?.results || [];
+      
+      const totalProductos = productos.reduce((sum: number, p: Producto) => sum + (p.cantidad || 0), 0);
+      
+      // Obtener instalaciones para cálculos
+      const instalaciones = Array.isArray(instalacionesData) 
+        ? instalacionesData 
+        : instalacionesData?.results || [];
 
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
@@ -67,9 +75,9 @@ export default function Dashboard() {
       );
 
       setStats({
-        totalInstalaciones: instalaciones.length,
-        totalTecnicos: tecnicos.length,
-        totalProductos: productos.reduce((sum: number, p: Producto) => sum + p.cantidad, 0),
+        totalInstalaciones,
+        totalTecnicos,
+        totalProductos,
         ingresosMes,
       });
 
