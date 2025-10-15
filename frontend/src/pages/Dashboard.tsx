@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Cable, Users, Package, TrendingUp } from 'lucide-react';
+import { Cable, Users, Package, TrendingUp, DollarSign } from 'lucide-react';
 import api, { endpoints } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import { Instalacion, Producto } from '@/types';
+import { Instalacion, Producto, Tecnico } from '@/types';
+
+interface IngresoTecnico {
+  tecnico: Tecnico;
+  ingresos: number;
+  instalaciones: number;
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -15,6 +21,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recentInstalaciones, setRecentInstalaciones] = useState<Instalacion[]>([]);
+  const [ingresosPorTecnico, setIngresosPorTecnico] = useState<IngresoTecnico[]>([]);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -87,12 +94,49 @@ export default function Dashboard() {
 
       console.log(`Total ingresos del mes: $${ingresosMes}`);
 
+      // Calcular ingresos por técnico del mes
+      const ingresosPorTecnicoMap = new Map<number, { ingresos: number; instalaciones: number }>();
+      
+      instalacionesMes.forEach((inst: Instalacion) => {
+        const tecnicoId = inst.id_tecnico;
+        const valor = parseFloat(inst.total || '0'); // Usar 'total' que es el valor del técnico
+        
+        if (ingresosPorTecnicoMap.has(tecnicoId)) {
+          const current = ingresosPorTecnicoMap.get(tecnicoId)!;
+          ingresosPorTecnicoMap.set(tecnicoId, {
+            ingresos: current.ingresos + valor,
+            instalaciones: current.instalaciones + 1
+          });
+        } else {
+          ingresosPorTecnicoMap.set(tecnicoId, {
+            ingresos: valor,
+            instalaciones: 1
+          });
+        }
+      });
+
+      // Convertir a array y agregar información del técnico
+      const ingresosPorTecnicoArray: IngresoTecnico[] = Array.from(ingresosPorTecnicoMap.entries())
+        .map(([tecnicoId, data]) => {
+          const tecnico = tecnicos.find((t: Tecnico) => t.id_unico_tecnico === tecnicoId);
+          return {
+            tecnico: tecnico || { id_unico_tecnico: tecnicoId, nombre: 'Desconocido', apellido: '', id_tecnico: '' },
+            ingresos: data.ingresos,
+            instalaciones: data.instalaciones
+          };
+        })
+        .sort((a, b) => b.ingresos - a.ingresos); // Ordenar por ingresos descendente
+
+      console.log('Ingresos por técnico:', ingresosPorTecnicoArray);
+
       setStats({
         totalInstalaciones,
         totalTecnicos,
         totalProductos,
         ingresosMes,
       });
+
+      setIngresosPorTecnico(ingresosPorTecnicoArray);
 
       // Obtener las 5 instalaciones más recientes
       setRecentInstalaciones(
@@ -108,7 +152,8 @@ export default function Dashboard() {
         totalInstalaciones,
         totalTecnicos,
         totalProductos,
-        ingresosMes
+        ingresosMes,
+        tecnicosConIngresos: ingresosPorTecnicoArray.length
       });
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
@@ -217,12 +262,67 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Recent Installations Card with slide-up animation */}
+      {/* Ingresos por Técnico del Mes */}
       <Card 
         className={`transform transition-all duration-700 ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
         }`}
         style={{ transitionDelay: '400ms' }}
+      >
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-green-600" />
+            Ingresos por Técnico del Mes
+          </CardTitle>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            {new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {ingresosPorTecnico.length > 0 ? (
+            <div className="space-y-3">
+              {ingresosPorTecnico.map((item, index) => (
+                <div
+                  key={item.tecnico.id_unico_tecnico}
+                  className={`flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-800/30
+                    transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md ${
+                    isVisible ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'
+                  }`}
+                  style={{ transitionDelay: `${500 + index * 100}ms` }}
+                >
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      {item.tecnico.nombre} {item.tecnico.apellido}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {item.instalaciones} {item.instalaciones === 1 ? 'instalación' : 'instalaciones'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                      {formatCurrency(item.ingresos)}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                      Promedio: {formatCurrency(item.ingresos / item.instalaciones)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+              No hay instalaciones registradas este mes
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Installations Card with slide-up animation */}
+      <Card 
+        className={`transform transition-all duration-700 ${
+          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+        }`}
+        style={{ transitionDelay: '600ms' }}
       >
         <CardHeader>
           <CardTitle>Instalaciones Recientes</CardTitle>
@@ -236,7 +336,7 @@ export default function Dashboard() {
                   transform transition-all duration-500 hover:scale-[1.02] hover:shadow-md hover:bg-slate-100 dark:hover:bg-slate-800 ${
                   isVisible ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'
                 }`}
-                style={{ transitionDelay: `${500 + index * 100}ms` }}
+                style={{ transitionDelay: `${700 + index * 100}ms` }}
               >
                 <div className="flex-1">
                   <p className="font-medium text-slate-900 dark:text-white transition-colors">
