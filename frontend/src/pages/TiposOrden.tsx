@@ -104,15 +104,26 @@ export default function TiposOrden() {
     setFormData({ nombre_orden: '', valor_orden: '', valor_orden_empresa: '' });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = tiposOrden.map((tipo) => ({
-      'Nombre Orden': tipo.nombre_orden,
-      'Valor Orden': parseFloat(tipo.valor_orden),
-      'Valor Orden Empresa': parseFloat(tipo.valor_orden_empresa),
-    }));
+  const handleExportToExcel = async () => {
+    try {
+      const response = await api.get<{ results: TipoOrden[] }>(
+        `${endpoints.tipodeordenes}?page_size=10000`
+      );
+      
+      const allTiposOrden = response.data.results || response.data;
+      
+      const dataToExport = allTiposOrden.map((tipo: TipoOrden) => ({
+        'Nombre Orden': tipo.nombre_orden,
+        'Valor Orden': parseFloat(tipo.valor_orden),
+        'Valor Orden Empresa': parseFloat(tipo.valor_orden_empresa),
+      }));
 
-    const filename = `TiposOrden_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'Tipos de Orden');
+      const filename = `TiposOrden_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'Tipos de Orden');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handlePageChange = (page: number) => {

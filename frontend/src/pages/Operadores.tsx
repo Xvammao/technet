@@ -95,13 +95,24 @@ export default function Operadores() {
     setFormData({ nombre_operador: '' });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = operadores.map((op) => ({
-      'Nombre Operador': op.nombre_operador,
-    }));
+  const handleExportToExcel = async () => {
+    try {
+      const response = await api.get<{ results: Operador[] }>(
+        `${endpoints.operadores}?page_size=10000`
+      );
+      
+      const allOperadores = response.data.results || response.data;
+      
+      const dataToExport = allOperadores.map((op: Operador) => ({
+        'Nombre Operador': op.nombre_operador,
+      }));
 
-    const filename = `Operadores_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'Operadores');
+      const filename = `Operadores_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'Operadores');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handlePageChange = (page: number) => {

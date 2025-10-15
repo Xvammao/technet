@@ -102,14 +102,25 @@ export default function Acometidas() {
     setFormData({ nombre_acometida: '', precio: '' });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = acometidas.map((aco) => ({
-      'Nombre Acometida': aco.nombre_acometida,
-      'Precio': parseFloat(aco.precio),
-    }));
+  const handleExportToExcel = async () => {
+    try {
+      const response = await api.get<{ results: Acometida[] }>(
+        `${endpoints.acometidas}?page_size=10000`
+      );
+      
+      const allAcometidas = response.data.results || response.data;
+      
+      const dataToExport = allAcometidas.map((aco: Acometida) => ({
+        'Nombre Acometida': aco.nombre_acometida,
+        'Precio': parseFloat(aco.precio),
+      }));
 
-    const filename = `Acometidas_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'Acometidas');
+      const filename = `Acometidas_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'Acometidas');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handlePageChange = (page: number) => {

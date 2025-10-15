@@ -117,15 +117,26 @@ export default function Tecnicos() {
     });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = tecnicos.map((tec) => ({
-      'ID Técnico': tec.id_tecnico,
-      'Nombre': tec.nombre,
-      'Apellido': tec.apellido,
-    }));
+  const handleExportToExcel = async () => {
+    try {
+      const response = await api.get<{ results: Tecnico[] }>(
+        `${endpoints.tecnicos}?page_size=10000`
+      );
+      
+      const allTecnicos = response.data.results || response.data;
+      
+      const dataToExport = allTecnicos.map((tec: Tecnico) => ({
+        'ID Técnico': tec.id_tecnico,
+        'Nombre': tec.nombre,
+        'Apellido': tec.apellido,
+      }));
 
-    const filename = `Tecnicos_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'Técnicos');
+      const filename = `Tecnicos_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'Técnicos');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handlePageChange = (page: number) => {

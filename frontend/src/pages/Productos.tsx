@@ -126,21 +126,32 @@ export default function Productos() {
     });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = productos.map((prod) => {
-      const tecnico = tecnicos.find(t => t.id_unico_tecnico === prod.id_tecnico);
-      return {
-        'Categoría': prod.categoria,
-        'Nombre': prod.nombre_producto,
-        'Serie': prod.producto_serie,
-        'Cantidad': prod.cantidad,
-        'Técnico': tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-',
-        'Fecha Asignación': formatDateForExcel(prod.fecha_asignacion),
-      };
-    });
+  const handleExportToExcel = async () => {
+    try {
+      const response = await api.get<{ results: Producto[] }>(
+        `${endpoints.productos}?page_size=10000`
+      );
+      
+      const allProductos = response.data.results || response.data;
+      
+      const dataToExport = allProductos.map((prod: Producto) => {
+        const tecnico = tecnicos.find(t => t.id_unico_tecnico === prod.id_tecnico);
+        return {
+          'Categoría': prod.categoria,
+          'Nombre': prod.nombre_producto,
+          'Serie': prod.producto_serie,
+          'Cantidad': prod.cantidad,
+          'Técnico': tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-',
+          'Fecha Asignación': formatDateForExcel(prod.fecha_asignacion),
+        };
+      });
 
-    const filename = `Productos_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'Productos');
+      const filename = `Productos_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'Productos');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handlePageChange = (page: number) => {

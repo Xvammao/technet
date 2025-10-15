@@ -246,29 +246,41 @@ export default function Instalaciones() {
     });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = instalaciones.map((inst) => {
-      const tecnico = tecnicos.find(t => t.id_unico_tecnico === inst.id_tecnico);
-      const operador = operadores.find(o => o.id_ope === inst.id_operador);
+  const handleExportToExcel = async () => {
+    try {
+      // Obtener TODOS los datos sin paginación para exportar
+      const response = await api.get<{ results: Instalacion[] }>(
+        `${endpoints.instalaciones}?page_size=10000`
+      );
       
-      return {
-        'Número OT': inst.numero_ot,
-        'Fecha': formatDateForExcel(inst.fecha_instalacion),
-        'Dirección': inst.direccion,
-        'Técnico': tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-',
-        'Operador': operador ? operador.nombre_operador : '-',
-        'Metros Cable': inst.metros_cable,
-        'Serie Producto': inst.producto_serie,
-        'Equipo Reutilizado': inst.eq_reutilizado || '',
-        'Equipo Retirado': inst.eq_retirado || '',
-        'Total Técnico': parseFloat(inst.total || '0'),
-        'Total Empresa': parseFloat(inst.valor_total_empresa || '0'),
-        'Observaciones': inst.observaciones || '',
-      };
-    });
+      const allInstalaciones = response.data.results || response.data;
+      
+      const dataToExport = allInstalaciones.map((inst: Instalacion) => {
+        const tecnico = tecnicos.find(t => t.id_unico_tecnico === inst.id_tecnico);
+        const operador = operadores.find(o => o.id_ope === inst.id_operador);
+        
+        return {
+          'Número OT': inst.numero_ot,
+          'Fecha': formatDateForExcel(inst.fecha_instalacion),
+          'Dirección': inst.direccion,
+          'Técnico': tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-',
+          'Operador': operador ? operador.nombre_operador : '-',
+          'Metros Cable': inst.metros_cable,
+          'Serie Producto': inst.producto_serie,
+          'Equipo Reutilizado': inst.eq_reutilizado || '',
+          'Equipo Retirado': inst.eq_retirado || '',
+          'Total Técnico': parseFloat(inst.total || '0'),
+          'Total Empresa': parseFloat(inst.valor_total_empresa || '0'),
+          'Observaciones': inst.observaciones || '',
+        };
+      });
 
-    const filename = `Instalaciones_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'Instalaciones');
+      const filename = `Instalaciones_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'Instalaciones');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handleImportClick = () => {

@@ -26,10 +26,12 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       console.log('Cargando datos del dashboard...');
+      
+      // Cargar datos paginados - necesitamos obtener todos los datos para las estadísticas
       const [instalacionesRes, tecnicosRes, productosRes] = await Promise.all([
-        api.get<Instalacion[]>(endpoints.instalaciones),
-        api.get<Tecnico[]>(endpoints.tecnicos),
-        api.get<Producto[]>(endpoints.productos),
+        api.get(endpoints.instalaciones + '?page_size=1000'), // Obtener más datos para estadísticas
+        api.get(endpoints.tecnicos + '?page_size=1000'),
+        api.get(endpoints.productos + '?page_size=1000'),
       ]);
 
       console.log('Datos recibidos:', {
@@ -38,30 +40,42 @@ export default function Dashboard() {
         productos: productosRes.data
       });
 
-      const instalaciones = instalacionesRes.data || [];
+      // Manejar respuesta paginada o array directo
+      const instalaciones = Array.isArray(instalacionesRes.data) 
+        ? instalacionesRes.data 
+        : instalacionesRes.data?.results || [];
+      
+      const tecnicos = Array.isArray(tecnicosRes.data)
+        ? tecnicosRes.data
+        : tecnicosRes.data?.results || [];
+      
+      const productos = Array.isArray(productosRes.data)
+        ? productosRes.data
+        : productosRes.data?.results || [];
+
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       
-      const instalacionesMes = instalaciones.filter(inst => {
+      const instalacionesMes = instalaciones.filter((inst: Instalacion) => {
         const date = new Date(inst.fecha_instalacion);
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       });
 
       const ingresosMes = instalacionesMes.reduce(
-        (sum, inst) => sum + parseFloat(inst.valor_total_empresa || '0'),
+        (sum: number, inst: Instalacion) => sum + parseFloat(inst.valor_total_empresa || '0'),
         0
       );
 
       setStats({
         totalInstalaciones: instalaciones.length,
-        totalTecnicos: tecnicosRes.data?.length || 0,
-        totalProductos: productosRes.data?.reduce((sum, p) => sum + p.cantidad, 0) || 0,
+        totalTecnicos: tecnicos.length,
+        totalProductos: productos.reduce((sum: number, p: Producto) => sum + p.cantidad, 0),
         ingresosMes,
       });
 
       setRecentInstalaciones(
         instalaciones
-          .sort((a, b) => 
+          .sort((a: Instalacion, b: Instalacion) => 
             new Date(b.fecha_instalacion).getTime() - new Date(a.fecha_instalacion).getTime()
           )
           .slice(0, 5)

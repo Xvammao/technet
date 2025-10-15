@@ -104,15 +104,26 @@ export default function DrPage() {
     setFormData({ nombre_dr: '', valor_dr: '', valor_dr_empresa: '' });
   };
 
-  const handleExportToExcel = () => {
-    const dataToExport = drs.map((dr) => ({
-      'Nombre DR': dr.nombre_dr,
-      'Valor DR': parseFloat(dr.valor_dr),
-      'Valor DR Empresa': parseFloat(dr.valor_dr_empresa),
-    }));
+  const handleExportToExcel = async () => {
+    try {
+      const response = await api.get<{ results: Dr[] }>(
+        `${endpoints.dr}?page_size=10000`
+      );
+      
+      const allDrs = response.data.results || response.data;
+      
+      const dataToExport = allDrs.map((dr: Dr) => ({
+        'Nombre DR': dr.nombre_dr,
+        'Valor DR': parseFloat(dr.valor_dr),
+        'Valor DR Empresa': parseFloat(dr.valor_dr_empresa),
+      }));
 
-    const filename = `DR_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-    exportToExcel(dataToExport, filename, 'DR');
+      const filename = `DR_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
+      exportToExcel(dataToExport, filename, 'DR');
+    } catch (error) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
   };
 
   const handlePageChange = (page: number) => {
