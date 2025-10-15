@@ -263,7 +263,7 @@ export default function Instalaciones() {
   const handleExportToExcel = async () => {
     try {
       // Construir parámetros con los filtros activos
-      const params: any = { page_size: 10000 };
+      const params: any = { page_size: 50000 };  // Solicitar TODOS los datos
       if (searchTerm) params.search = searchTerm;
       if (filterTecnico) params.id_tecnico = filterTecnico;
       if (filterOperador) params.id_operador = filterOperador;
@@ -277,6 +277,8 @@ export default function Instalaciones() {
       );
       
       const allInstalaciones = response.data.results || response.data;
+      
+      console.log(`Exportando ${allInstalaciones.length} instalaciones`);
       
       const dataToExport = allInstalaciones.map((inst: Instalacion) => {
         const tecnico = tecnicos.find(t => t.id_unico_tecnico === inst.id_tecnico);

@@ -120,7 +120,7 @@ export default function Tecnicos() {
   const handleExportToExcel = async () => {
     try {
       const response = await api.get<{ results: Tecnico[] }>(
-        `${endpoints.tecnicos}?page_size=10000`
+        `${endpoints.tecnicos}?page_size=50000`
       );
       
       const allTecnicos = response.data.results || response.data;

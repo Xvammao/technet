@@ -98,7 +98,7 @@ export default function Operadores() {
   const handleExportToExcel = async () => {
     try {
       const response = await api.get<{ results: Operador[] }>(
-        `${endpoints.operadores}?page_size=10000`
+        `${endpoints.operadores}?page_size=50000`
       );
       
       const allOperadores = response.data.results || response.data;

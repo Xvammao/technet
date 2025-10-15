@@ -105,7 +105,7 @@ export default function Acometidas() {
   const handleExportToExcel = async () => {
     try {
       const response = await api.get<{ results: Acometida[] }>(
-        `${endpoints.acometidas}?page_size=10000`
+        `${endpoints.acometidas}?page_size=50000`
       );
       
       const allAcometidas = response.data.results || response.data;

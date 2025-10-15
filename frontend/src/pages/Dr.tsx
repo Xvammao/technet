@@ -107,7 +107,7 @@ export default function DrPage() {
   const handleExportToExcel = async () => {
     try {
       const response = await api.get<{ results: Dr[] }>(
-        `${endpoints.dr}?page_size=10000`
+        `${endpoints.dr}?page_size=50000`
       );
       
       const allDrs = response.data.results || response.data;

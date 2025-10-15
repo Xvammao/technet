@@ -27,40 +27,44 @@ export default function Dashboard() {
     try {
       console.log('Cargando datos del dashboard...');
       
-      // Obtener conteos totales y datos recientes
+      // Obtener TODOS los datos sin límite de paginación
       const [instalacionesRes, tecnicosRes, productosRes] = await Promise.all([
-        api.get(endpoints.instalaciones + '?page_size=10000'), // Obtener TODOS los datos
-        api.get(endpoints.tecnicos + '?page_size=10000'),
-        api.get(endpoints.productos + '?page_size=10000'),
+        api.get(endpoints.instalaciones + '?page_size=50000'),
+        api.get(endpoints.tecnicos + '?page_size=50000'),
+        api.get(endpoints.productos + '?page_size=50000'),
       ]);
 
-      console.log('Datos recibidos:', {
+      console.log('Respuestas recibidas:', {
         instalaciones: instalacionesRes.data,
         tecnicos: tecnicosRes.data,
         productos: productosRes.data
       });
 
-      // Manejar respuesta paginada - usar count si está disponible
-      const instalacionesData = instalacionesRes.data;
-      const tecnicosData = tecnicosRes.data;
-      const productosData = productosRes.data;
+      // Extraer datos de las respuestas paginadas
+      const instalaciones = Array.isArray(instalacionesRes.data) 
+        ? instalacionesRes.data 
+        : instalacionesRes.data?.results || [];
       
-      // Usar el count de la respuesta paginada para totales exactos
-      const totalInstalaciones = instalacionesData.count || instalacionesData.results?.length || instalacionesData.length || 0;
-      const totalTecnicos = tecnicosData.count || tecnicosData.results?.length || tecnicosData.length || 0;
+      const tecnicos = Array.isArray(tecnicosRes.data)
+        ? tecnicosRes.data
+        : tecnicosRes.data?.results || [];
       
-      // Para productos, necesitamos los datos completos para sumar cantidades
-      const productos = Array.isArray(productosData)
-        ? productosData
-        : productosData?.results || [];
-      
+      const productos = Array.isArray(productosRes.data)
+        ? productosRes.data
+        : productosRes.data?.results || [];
+
+      console.log('Datos extraídos:', {
+        totalInstalaciones: instalaciones.length,
+        totalTecnicos: tecnicos.length,
+        totalProductos: productos.length
+      });
+
+      // Calcular totales
+      const totalInstalaciones = instalaciones.length;
+      const totalTecnicos = tecnicos.length;
       const totalProductos = productos.reduce((sum: number, p: Producto) => sum + (p.cantidad || 0), 0);
       
-      // Obtener instalaciones para cálculos
-      const instalaciones = Array.isArray(instalacionesData) 
-        ? instalacionesData 
-        : instalacionesData?.results || [];
-
+      // Calcular ingresos del mes actual
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       
@@ -69,10 +73,19 @@ export default function Dashboard() {
         return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       });
 
+      console.log(`Instalaciones del mes: ${instalacionesMes.length}`);
+
+      // Sumar TODOS los valores de valor_total_empresa del mes
       const ingresosMes = instalacionesMes.reduce(
-        (sum: number, inst: Instalacion) => sum + parseFloat(inst.valor_total_empresa || '0'),
+        (sum: number, inst: Instalacion) => {
+          const valor = parseFloat(inst.valor_total_empresa || '0');
+          console.log(`Instalación ${inst.numero_ot}: $${valor}`);
+          return sum + valor;
+        },
         0
       );
+
+      console.log(`Total ingresos del mes: $${ingresosMes}`);
 
       setStats({
         totalInstalaciones,
@@ -81,6 +94,7 @@ export default function Dashboard() {
         ingresosMes,
       });
 
+      // Obtener las 5 instalaciones más recientes
       setRecentInstalaciones(
         instalaciones
           .sort((a: Instalacion, b: Instalacion) => 
@@ -90,7 +104,12 @@ export default function Dashboard() {
       );
       
       setError(null);
-      console.log('Dashboard cargado exitosamente');
+      console.log('Dashboard cargado exitosamente con stats:', {
+        totalInstalaciones,
+        totalTecnicos,
+        totalProductos,
+        ingresosMes
+      });
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
       console.error('Error details:', error.response);

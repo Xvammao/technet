@@ -14,7 +14,7 @@ from . import serializers
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
-    max_page_size = 100
+    max_page_size = 50000  # Permitir exportar grandes cantidades de datos
 
 # Acometidas
 class AcometidasList(generics.ListCreateAPIView):
@@ -317,6 +317,16 @@ class ProductosList(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['nombre_producto', 'producto_serie', 'categoria']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtro por técnico
+        id_tecnico = self.request.query_params.get('id_tecnico', None)
+        if id_tecnico:
+            queryset = queryset.filter(id_tecnico=id_tecnico)
+        
+        return queryset.order_by('-fecha_asignacion')
 
 class ProductosDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Productos.objects.all()

@@ -29,6 +29,7 @@ export default function Productos() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterTecnico, setFilterTecnico] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,13 +50,16 @@ export default function Productos() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, filterTecnico]);
 
   const loadData = async () => {
     try {
       const params: any = { page: currentPage };
       if (searchTerm) {
         params.search = searchTerm;
+      }
+      if (filterTecnico) {
+        params.id_tecnico = filterTecnico;
       }
       const [prodRes, tecRes] = await Promise.all([
         api.get(endpoints.productos, { params }),
@@ -128,11 +132,19 @@ export default function Productos() {
 
   const handleExportToExcel = async () => {
     try {
+      // Construir parámetros con los filtros activos
+      const params: any = { page_size: 50000 };
+      if (searchTerm) params.search = searchTerm;
+      if (filterTecnico) params.id_tecnico = filterTecnico;
+      
       const response = await api.get<{ results: Producto[] }>(
-        `${endpoints.productos}?page_size=10000`
+        endpoints.productos,
+        { params }
       );
       
       const allProductos = response.data.results || response.data;
+      
+      console.log(`Exportando ${allProductos.length} productos`);
       
       const dataToExport = allProductos.map((prod: Producto) => {
         const tecnico = tecnicos.find(t => t.id_unico_tecnico === prod.id_tecnico);
@@ -285,14 +297,56 @@ export default function Productos() {
 
       <Card>
         <CardHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Buscar por producto, serie, categoría o técnico..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por producto, serie o categoría..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Técnico</label>
+                <select
+                  value={filterTecnico}
+                  onChange={(e) => {
+                    setFilterTecnico(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-10 px-3 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950"
+                >
+                  <option value="">Todos</option>
+                  {tecnicos.map((tec) => (
+                    <option key={tec.id_unico_tecnico} value={tec.id_unico_tecnico}>
+                      {tec.nombre} {tec.apellido}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {filterTecnico && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFilterTecnico('');
+                    setSearchTerm('');
+                    setCurrentPage(1);
+                  }}
+                  className="mt-6"
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+            
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              Mostrando {totalCount} productos
+            </div>
           </div>
         </CardHeader>
         <CardContent>
