@@ -626,39 +626,18 @@ export default function Instalaciones() {
   const getBaseOT = (numeroOt: string): string => {
     if (!numeroOt) return '';
     
-    // Convertir a string y limpiar espacios
-    const ot = numeroOt.toString().trim().toUpperCase();
+    // Normalizar: mayúsculas y sin espacios
+    let ot = numeroOt.toString().trim().toUpperCase();
     
-    // Lista de sufijos conocidos a remover (más específicos primero)
-    const suffixes = [
-      // Con guión bajo
-      /_DUP\d+$/,      // _DUP1, _DUP2, _DUP3, etc.
-      /_DUPLI\d+$/,    // _DUPLI1, _DUPLI2, etc.
-      /_AGILETV$/,     // _AGILETV
-      // Sin guión bajo (solo si viene después de números)
-      /(\d+)DUP\d+$/,  // 8421868DUP1 → captura el número base
-      /(\d+)DUPLI\d+$/, // 8421868DUPLI1 → captura el número base
-      /(\d+)AGILETV$/, // 8421868AGILETV → captura el número base
-    ];
+    // Remover sufijos en orden (aplicar todos los que coincidan)
+    ot = ot.replace(/_DUP\d+$/i, '');      // 8421868_DUP1 → 8421868
+    ot = ot.replace(/_DUPLI\d+$/i, '');    // 8421868_DUPLI1 → 8421868
+    ot = ot.replace(/_AGILETV$/i, '');     // 8421868_AGILETV → 8421868
+    ot = ot.replace(/DUP\d+$/i, '');       // 8421868DUP1 → 8421868
+    ot = ot.replace(/DUPLI\d+$/i, '');     // 8421868DUPLI1 → 8421868
+    ot = ot.replace(/AGILETV$/i, '');      // 8421868AGILETV → 8421868
     
-    let baseOt = ot;
-    
-    // Intentar cada patrón
-    for (const suffix of suffixes) {
-      if (suffix.test(baseOt)) {
-        // Si el patrón tiene grupo de captura, usar el grupo
-        const match = baseOt.match(suffix);
-        if (match && match[1]) {
-          baseOt = match[1];
-        } else {
-          // Si no tiene grupo de captura, simplemente remover el sufijo
-          baseOt = baseOt.replace(suffix, '');
-        }
-        break; // Solo aplicar el primer patrón que coincida
-      }
-    }
-    
-    return baseOt;
+    return ot;
   };
 
   // Función para alternar expansión de grupos
