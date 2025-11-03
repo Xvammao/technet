@@ -622,10 +622,31 @@ export default function Instalaciones() {
     }
   };
 
-  // Función para obtener el OT base (sin sufijos _DUP, _AGILETV, etc.)
+  // Función para obtener el OT base (sin sufijos de duplicados)
   const getBaseOT = (numeroOt: string): string => {
-    // Remover sufijos como _DUP1, _DUP2, _AGILETV, etc.
-    return numeroOt.replace(/_(DUP\d+|AGILETV|[A-Z]+\d*)$/, '');
+    if (!numeroOt) return '';
+    
+    // Convertir a string y limpiar espacios
+    const ot = numeroOt.toString().trim();
+    
+    // Patrones de sufijos a remover (con o sin guión bajo):
+    // - _DUP1, _DUP2, _DUPLI1, _DUPLI2
+    // - DUP1, DUP2, DUPLI1, DUPLI2
+    // - dupli1, dupli2, dup1, dup2
+    // - _AGILETV, AGILETV
+    // - Cualquier sufijo alfabético seguido de números
+    const patterns = [
+      /_?(DUP|DUPLI|dupli|dup)\d+$/i,  // dupli1, dupli2, dup1, etc.
+      /_?AGILETV$/i,                    // AGILETV
+      /_?[A-Z]+\d+$/,                   // Cualquier letras mayúsculas + números
+    ];
+    
+    let baseOt = ot;
+    for (const pattern of patterns) {
+      baseOt = baseOt.replace(pattern, '');
+    }
+    
+    return baseOt;
   };
 
   // Función para alternar expansión de grupos
@@ -816,11 +837,24 @@ export default function Instalaciones() {
                 const grupos = new Map<string, Instalacion[]>();
                 filteredInstalaciones.forEach((inst) => {
                   const baseOt = getBaseOT(inst.numero_ot);
+                  
+                  // Log para debugging
+                  if (inst.numero_ot !== baseOt) {
+                    console.log(`Agrupando: "${inst.numero_ot}" → "${baseOt}"`);
+                  }
+                  
                   if (!grupos.has(baseOt)) {
                     grupos.set(baseOt, []);
                   }
                   grupos.get(baseOt)!.push(inst);
                 });
+                
+                // Log de grupos creados
+                console.log('Grupos creados:', Array.from(grupos.entries()).map(([base, items]) => ({
+                  base,
+                  count: items.length,
+                  ots: items.map(i => i.numero_ot)
+                })));
 
                 const rows: JSX.Element[] = [];
                 
