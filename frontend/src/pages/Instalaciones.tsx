@@ -45,6 +45,7 @@ export default function Instalaciones() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalGroups, setTotalGroups] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -100,8 +101,12 @@ export default function Instalaciones() {
       });
       const totalGrupos = grupos.size;
       const pages = Math.ceil(totalGrupos / 20);
+      setTotalGroups(totalGrupos);
       setTotalPages(pages);
       console.log(`Total de grupos: ${totalGrupos}, Páginas: ${pages}`);
+    } else {
+      setTotalGroups(0);
+      setTotalPages(1);
     }
   }, [instalaciones]);
 
@@ -805,7 +810,7 @@ export default function Instalaciones() {
             
             {/* Resumen de filtros */}
             <div className="flex items-center gap-4 text-sm text-slate-600">
-              <span>Mostrando {instalaciones.length} de {totalCount} instalaciones</span>
+              <span>Mostrando {totalGroups} grupos ({totalCount} instalaciones totales)</span>
               {(filterTecnico || filterOperador || filterFechaInicio || filterFechaFin || searchTerm) && (
                 <Button
                   variant="ghost"
@@ -1015,7 +1020,7 @@ export default function Instalaciones() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
-            totalItems={totalCount}
+            totalItems={totalGroups}
             itemsPerPage={20}
           />
         </CardContent>
