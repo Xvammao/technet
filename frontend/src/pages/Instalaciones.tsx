@@ -91,6 +91,7 @@ export default function Instalaciones() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const params: any = { page: currentPage };
       if (searchTerm) {
         params.search = searchTerm;
@@ -109,6 +110,8 @@ export default function Instalaciones() {
         params.fecha_fin = filterFechaFin;
       }
       
+      console.log('Cargando instalaciones con params:', params);
+      
       const [instRes, tecRes, opRes, toRes, drRes, acoRes] = await Promise.all([
         api.get(endpoints.instalaciones, { params }),
         api.get(endpoints.tecnicos, { params: { page_size: 1000 } }),
@@ -117,9 +120,20 @@ export default function Instalaciones() {
         api.get(endpoints.dr, { params: { page_size: 1000 } }),
         api.get(endpoints.acometidas, { params: { page_size: 1000 } }),
       ]);
+      
+      const totalCount = instRes.data.count || 0;
+      const totalPages = Math.ceil(totalCount / 20);
+      
+      console.log('Datos recibidos:', {
+        instalaciones: instRes.data.results?.length || 0,
+        totalCount,
+        totalPages,
+        currentPage
+      });
+      
       setInstalaciones(instRes.data.results || []);
-      setTotalCount(instRes.data.count || 0);
-      setTotalPages(Math.ceil((instRes.data.count || 0) / 20));
+      setTotalCount(totalCount);
+      setTotalPages(totalPages);
       setTecnicos(tecRes.data.results || tecRes.data || []);
       setOperadores(opRes.data.results || opRes.data || []);
       setTiposOrden(toRes.data.results || toRes.data || []);
@@ -127,7 +141,6 @@ export default function Instalaciones() {
       setAcometidas(acoRes.data.results || acoRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-      // Mantener arrays vacíos en caso de error
       setInstalaciones([]);
       setTecnicos([]);
       setOperadores([]);
@@ -175,11 +188,20 @@ export default function Instalaciones() {
       
       if (editingItem) {
         await api.put(`${endpoints.instalaciones}${editingItem.id_instalacion}/`, dataToSend);
+        console.log('Instalación actualizada exitosamente');
       } else {
         await api.post(endpoints.instalaciones, dataToSend);
+        console.log('Instalación creada exitosamente');
       }
-      loadData();
+      
+      // Cerrar diálogo primero
       handleCloseDialog();
+      
+      // Recargar datos para reflejar cambios
+      await loadData();
+      
+      // Mostrar mensaje de éxito
+      alert(editingItem ? 'Instalación actualizada correctamente' : 'Instalación creada correctamente');
     } catch (error: any) {
       console.error('Error saving instalacion:', error);
       console.error('Respuesta del servidor:', error.response?.data);
