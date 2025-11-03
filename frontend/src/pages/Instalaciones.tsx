@@ -646,27 +646,17 @@ export default function Instalaciones() {
     setLoading(true);
   };
 
-  const filteredInstalaciones = instalaciones.filter((inst) => {
-    // Filtro por técnico
-    const matchesTecnico = !filterTecnico || inst.id_tecnico.toString() === filterTecnico;
+  // NO filtrar en frontend - el backend ya filtra
+  // Los datos en 'instalaciones' ya vienen filtrados del backend
+  const filteredInstalaciones = instalaciones;
 
-    // Filtro por operador
-    const matchesOperador = !filterOperador || inst.id_operador.toString() === filterOperador;
-
-    // Filtro por rango de fechas
-    const matchesFecha = (!filterFechaInicio || inst.fecha_instalacion >= filterFechaInicio) &&
-                         (!filterFechaFin || inst.fecha_instalacion <= filterFechaFin);
-
-    return matchesTecnico && matchesOperador && matchesFecha;
-  });
-
-  // Calcular totales
-  const totalTecnico = filteredInstalaciones.reduce(
+  // Calcular totales sobre los datos ya filtrados del backend
+  const totalTecnico = instalaciones.reduce(
     (sum, inst) => sum + parseFloat(inst.total || '0'),
     0
   );
   
-  const totalEmpresa = filteredInstalaciones.reduce(
+  const totalEmpresa = instalaciones.reduce(
     (sum, inst) => sum + parseFloat(inst.valor_total_empresa || '0'),
     0
   );
@@ -786,8 +776,8 @@ export default function Instalaciones() {
             
             {/* Resumen de filtros */}
             <div className="flex items-center gap-4 text-sm text-slate-600">
-              <span>Mostrando {filteredInstalaciones.length} de {instalaciones.length} instalaciones</span>
-              {(filterTecnico || filterOperador || filterFechaInicio || filterFechaFin) && (
+              <span>Mostrando {instalaciones.length} de {totalCount} instalaciones</span>
+              {(filterTecnico || filterOperador || filterFechaInicio || filterFechaFin || searchTerm) && (
                 <Button
                   variant="ghost"
                   size="sm"

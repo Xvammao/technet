@@ -85,7 +85,8 @@ class InstalacionesList(generics.ListCreateAPIView):
         if fecha_fin:
             queryset = queryset.filter(fecha_instalacion__lte=fecha_fin)
         
-        return queryset.order_by('-fecha_instalacion')
+        # Eliminar duplicados y ordenar
+        return queryset.distinct().order_by('-fecha_instalacion')
     
     def perform_create(self, serializer):
         # Usar SQL crudo para evitar problemas con campos generados
