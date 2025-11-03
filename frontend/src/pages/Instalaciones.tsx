@@ -627,23 +627,35 @@ export default function Instalaciones() {
     if (!numeroOt) return '';
     
     // Convertir a string y limpiar espacios
-    const ot = numeroOt.toString().trim();
+    const ot = numeroOt.toString().trim().toUpperCase();
     
-    // Patrones de sufijos a remover (con o sin guión bajo):
-    // - _DUP1, _DUP2, _DUPLI1, _DUPLI2
-    // - DUP1, DUP2, DUPLI1, DUPLI2
-    // - dupli1, dupli2, dup1, dup2
-    // - _AGILETV, AGILETV
-    // - Cualquier sufijo alfabético seguido de números
-    const patterns = [
-      /_?(DUP|DUPLI|dupli|dup)\d+$/i,  // dupli1, dupli2, dup1, etc.
-      /_?AGILETV$/i,                    // AGILETV
-      /_?[A-Z]+\d+$/,                   // Cualquier letras mayúsculas + números
+    // Lista de sufijos conocidos a remover (más específicos primero)
+    const suffixes = [
+      // Con guión bajo
+      /_DUP\d+$/,      // _DUP1, _DUP2, _DUP3, etc.
+      /_DUPLI\d+$/,    // _DUPLI1, _DUPLI2, etc.
+      /_AGILETV$/,     // _AGILETV
+      // Sin guión bajo (solo si viene después de números)
+      /(\d+)DUP\d+$/,  // 8421868DUP1 → captura el número base
+      /(\d+)DUPLI\d+$/, // 8421868DUPLI1 → captura el número base
+      /(\d+)AGILETV$/, // 8421868AGILETV → captura el número base
     ];
     
     let baseOt = ot;
-    for (const pattern of patterns) {
-      baseOt = baseOt.replace(pattern, '');
+    
+    // Intentar cada patrón
+    for (const suffix of suffixes) {
+      if (suffix.test(baseOt)) {
+        // Si el patrón tiene grupo de captura, usar el grupo
+        const match = baseOt.match(suffix);
+        if (match && match[1]) {
+          baseOt = match[1];
+        } else {
+          // Si no tiene grupo de captura, simplemente remover el sufijo
+          baseOt = baseOt.replace(suffix, '');
+        }
+        break; // Solo aplicar el primer patrón que coincida
+      }
     }
     
     return baseOt;
@@ -836,11 +848,12 @@ export default function Instalaciones() {
                 // Agrupar instalaciones por OT base
                 const grupos = new Map<string, Instalacion[]>();
                 filteredInstalaciones.forEach((inst) => {
-                  const baseOt = getBaseOT(inst.numero_ot);
+                  const originalOt = inst.numero_ot;
+                  const baseOt = getBaseOT(originalOt);
                   
                   // Log para debugging
-                  if (inst.numero_ot !== baseOt) {
-                    console.log(`Agrupando: "${inst.numero_ot}" → "${baseOt}"`);
+                  if (originalOt.toUpperCase() !== baseOt) {
+                    console.log(`✓ Agrupando: "${originalOt}" → "${baseOt}"`);
                   }
                   
                   if (!grupos.has(baseOt)) {
@@ -849,12 +862,24 @@ export default function Instalaciones() {
                   grupos.get(baseOt)!.push(inst);
                 });
                 
-                // Log de grupos creados
-                console.log('Grupos creados:', Array.from(grupos.entries()).map(([base, items]) => ({
-                  base,
-                  count: items.length,
-                  ots: items.map(i => i.numero_ot)
-                })));
+                // Log de grupos creados con detalles
+                const gruposInfo = Array.from(grupos.entries()).map(([base, items]) => ({
+                  baseOT: base,
+                  cantidad: items.length,
+                  duplicado: items.length > 1,
+                  ots: items.map(i => i.numero_ot).join(', ')
+                }));
+                
+                console.log('═══════════════════════════════════════');
+                console.log('📊 GRUPOS DE INSTALACIONES:');
+                console.log('═══════════════════════════════════════');
+                gruposInfo.forEach(g => {
+                  if (g.duplicado) {
+                    console.log(`🔸 ${g.baseOT} (${g.cantidad} duplicados)`);
+                    console.log(`   OTs: ${g.ots}`);
+                  }
+                });
+                console.log('═══════════════════════════════════════');
 
                 const rows: JSX.Element[] = [];
                 
