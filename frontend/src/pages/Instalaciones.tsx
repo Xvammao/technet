@@ -89,31 +89,49 @@ export default function Instalaciones() {
     loadData();
   }, [currentPage]);
 
+  // Calcular total de páginas basado en grupos
+  useEffect(() => {
+    if (instalaciones.length > 0) {
+      // Agrupar para contar cuántos grupos hay
+      const grupos = new Map<string, number>();
+      instalaciones.forEach(inst => {
+        const baseOt = getBaseOT(inst.numero_ot);
+        grupos.set(baseOt, (grupos.get(baseOt) || 0) + 1);
+      });
+      const totalGrupos = grupos.size;
+      const pages = Math.ceil(totalGrupos / 20);
+      setTotalPages(pages);
+      console.log(`Total de grupos: ${totalGrupos}, Páginas: ${pages}`);
+    }
+  }, [instalaciones]);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const params: any = { page: currentPage };
+      
+      // Construir parámetros de filtros
+      const filterParams: any = {};
       if (searchTerm) {
-        params.search = searchTerm;
+        filterParams.search = searchTerm;
       }
-      // Aplicar filtros del backend
       if (filterTecnico) {
-        params.id_tecnico = filterTecnico;
+        filterParams.id_tecnico = filterTecnico;
       }
       if (filterOperador) {
-        params.id_operador = filterOperador;
+        filterParams.id_operador = filterOperador;
       }
       if (filterFechaInicio) {
-        params.fecha_inicio = filterFechaInicio;
+        filterParams.fecha_inicio = filterFechaInicio;
       }
       if (filterFechaFin) {
-        params.fecha_fin = filterFechaFin;
+        filterParams.fecha_fin = filterFechaFin;
       }
       
-      console.log('Cargando instalaciones con params:', params);
+      console.log('Cargando TODAS las instalaciones con filtros:', filterParams);
       
+      // Cargar TODOS los datos (sin paginación) para agrupar correctamente
       const [instRes, tecRes, opRes, toRes, drRes, acoRes] = await Promise.all([
-        api.get(endpoints.instalaciones, { params }),
+        api.get(endpoints.instalaciones, { params: { ...filterParams, page_size: 50000 } }),
         api.get(endpoints.tecnicos, { params: { page_size: 1000 } }),
         api.get(endpoints.operadores, { params: { page_size: 1000 } }),
         api.get(endpoints.tipodeordenes, { params: { page_size: 1000 } }),
@@ -121,19 +139,18 @@ export default function Instalaciones() {
         api.get(endpoints.acometidas, { params: { page_size: 1000 } }),
       ]);
       
-      const totalCount = instRes.data.count || 0;
-      const totalPages = Math.ceil(totalCount / 20);
+      const allInstalaciones = instRes.data.results || [];
       
       console.log('Datos recibidos:', {
-        instalaciones: instRes.data.results?.length || 0,
-        totalCount,
-        totalPages,
+        totalInstalaciones: allInstalaciones.length,
         currentPage
       });
       
-      setInstalaciones(instRes.data.results || []);
-      setTotalCount(totalCount);
-      setTotalPages(totalPages);
+      // Guardar TODAS las instalaciones para agrupar
+      setInstalaciones(allInstalaciones);
+      setTotalCount(allInstalaciones.length);
+      // Las páginas se calcularán basadas en grupos, no en instalaciones individuales
+      setTotalPages(1); // Se actualizará después de agrupar
       setTecnicos(tecRes.data.results || tecRes.data || []);
       setOperadores(opRes.data.results || opRes.data || []);
       setTiposOrden(toRes.data.results || toRes.data || []);
@@ -862,56 +879,76 @@ export default function Instalaciones() {
 
                 const rows: JSX.Element[] = [];
                 
-                grupos.forEach((instalaciones, baseOt) => {
+                // Convertir grupos a array y ordenar por fecha más reciente
+                const gruposArray = Array.from(grupos.entries()).map(([baseOt, instalaciones]) => ({
+                  baseOt,
+                  instalaciones: instalaciones.sort((a, b) => 
+                    new Date(b.fecha_instalacion).getTime() - new Date(a.fecha_instalacion).getTime()
+                  )
+                }));
+                
+                // Paginación en frontend: mostrar solo 20 grupos por página
+                const itemsPerPage = 20;
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedGroups = gruposArray.slice(startIndex, endIndex);
+                
+                console.log(`Mostrando grupos ${startIndex + 1} a ${Math.min(endIndex, gruposArray.length)} de ${gruposArray.length}`);
+                
+                paginatedGroups.forEach(({ baseOt, instalaciones }) => {
                   const esDuplicado = instalaciones.length > 1;
                   const estaExpandido = expandedGroups.has(baseOt);
                   
-                  if (esDuplicado) {
-                    // Calcular totales del grupo
-                    const totalTecnicoGrupo = instalaciones.reduce((sum, inst) => 
-                      sum + parseFloat(inst.total || '0'), 0
-                    );
-                    const totalEmpresaGrupo = instalaciones.reduce((sum, inst) => 
-                      sum + parseFloat(inst.valor_total_empresa || '0'), 0
-                    );
+                  // Calcular totales del grupo (siempre, incluso para únicos)
+                  const totalTecnicoGrupo = instalaciones.reduce((sum, inst) => 
+                    sum + parseFloat(inst.total || '0'), 0
+                  );
+                  const totalEmpresaGrupo = instalaciones.reduce((sum, inst) => 
+                    sum + parseFloat(inst.valor_total_empresa || '0'), 0
+                  );
+                  
+                  // Color de fondo: amarillo para duplicados, gris para únicos
+                  const bgColor = esDuplicado ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-slate-50 hover:bg-slate-100';
+                  
+                  // Fila de grupo (SIEMPRE mostrar, incluso para únicos)
+                  rows.push(
+                    <TableRow 
+                      key={`group-${baseOt}`}
+                      className={`${bgColor} cursor-pointer`}
+                      onClick={() => toggleGroup(baseOt)}
+                    >
+                      <TableCell className="font-bold">
+                        <div className="flex items-center gap-2">
+                          {estaExpandido ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                          {baseOt} {esDuplicado && `(${instalaciones.length} duplicados)`}
+                        </div>
+                      </TableCell>
+                      <TableCell colSpan={2} className="text-sm text-slate-600">
+                        Click para {estaExpandido ? 'contraer' : 'expandir'}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {esDuplicado ? 'Subtotal:' : ''}
+                      </TableCell>
+                      <TableCell className="font-bold text-green-600">
+                        {formatCurrency(totalTecnicoGrupo)}
+                      </TableCell>
+                      <TableCell className="font-bold text-blue-600">
+                        {formatCurrency(totalEmpresaGrupo)}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  );
                     
-                    // Fila de grupo (clickeable para expandir/contraer)
-                    rows.push(
-                      <TableRow 
-                        key={`group-${baseOt}`}
-                        className="bg-yellow-50 hover:bg-yellow-100 cursor-pointer"
-                        onClick={() => toggleGroup(baseOt)}
-                      >
-                        <TableCell className="font-bold">
-                          <div className="flex items-center gap-2">
-                            {estaExpandido ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                            {baseOt} ({instalaciones.length} duplicados)
-                          </div>
-                        </TableCell>
-                        <TableCell colSpan={2} className="text-sm text-slate-600">
-                          Click para {estaExpandido ? 'contraer' : 'expandir'}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">Subtotal:</TableCell>
-                        <TableCell className="font-bold text-green-600">
-                          {formatCurrency(totalTecnicoGrupo)}
-                        </TableCell>
-                        <TableCell className="font-bold text-blue-600">
-                          {formatCurrency(totalEmpresaGrupo)}
-                        </TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                    );
-                    
-                    // Filas individuales (solo si está expandido)
-                    if (estaExpandido) {
-                      instalaciones.forEach((instalacion) => {
-                        const tecnico = tecnicos.find(t => t.id_unico_tecnico === instalacion.id_tecnico);
-                        rows.push(
-                          <TableRow key={instalacion.id_instalacion} className="bg-yellow-50/50">
+                  // Filas individuales (solo si está expandido)
+                  if (estaExpandido) {
+                    instalaciones.forEach((instalacion) => {
+                      const tecnico = tecnicos.find(t => t.id_unico_tecnico === instalacion.id_tecnico);
+                      rows.push(
+                        <TableRow key={instalacion.id_instalacion} className={`${bgColor}/50`}>
                             <TableCell className="font-medium pl-8">
                               {instalacion.numero_ot}
                             </TableCell>
@@ -956,47 +993,6 @@ export default function Instalaciones() {
                         );
                       });
                     }
-                  } else {
-                    // Instalación única (sin duplicados)
-                    const instalacion = instalaciones[0];
-                    const tecnico = tecnicos.find(t => t.id_unico_tecnico === instalacion.id_tecnico);
-                    rows.push(
-                      <TableRow key={instalacion.id_instalacion}>
-                        <TableCell className="font-medium">{instalacion.numero_ot}</TableCell>
-                        <TableCell>
-                          {new Date(instalacion.fecha_instalacion).toLocaleDateString('es-CO')}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">{instalacion.direccion}</TableCell>
-                        <TableCell>
-                          {tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-'}
-                        </TableCell>
-                        <TableCell className="font-semibold text-green-600">
-                          {formatCurrency(parseFloat(instalacion.total || '0'))}
-                        </TableCell>
-                        <TableCell className="font-semibold text-blue-600">
-                          {formatCurrency(parseFloat(instalacion.valor_total_empresa || '0'))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(instalacion)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(instalacion.id_instalacion)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }
                 });
                 
                 return rows;
