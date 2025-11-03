@@ -61,7 +61,7 @@ class InstalacionesList(generics.ListCreateAPIView):
     serializer_class = serializers.InstalacionesSerializers
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter]
-    search_fields = ['numero_ot', 'direccion', 'producto_serie']
+    search_fields = ['numero_ot', 'direccion', 'producto_serie__producto_serie']
     
     def get_queryset(self):
         queryset = super().get_queryset()

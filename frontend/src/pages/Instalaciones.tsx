@@ -76,8 +76,18 @@ export default function Instalaciones() {
   });
 
   useEffect(() => {
+    // Debounce para la búsqueda
+    const delayDebounceFn = setTimeout(() => {
+      setCurrentPage(1); // Resetear a página 1 cuando cambia la búsqueda
+      loadData();
+    }, 500); // Esperar 500ms después de que el usuario deje de escribir
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, filterTecnico, filterOperador, filterFechaInicio, filterFechaFin]);
+
+  useEffect(() => {
     loadData();
-  }, [currentPage, searchTerm, filterTecnico, filterOperador, filterFechaInicio, filterFechaFin]);
+  }, [currentPage]);
 
   const loadData = async () => {
     try {
