@@ -219,7 +219,8 @@ export default function Instalaciones() {
       // Cerrar diálogo primero
       handleCloseDialog();
       
-      // Recargar datos para reflejar cambios
+      // Ir a la primera página y recargar datos para reflejar cambios
+      setCurrentPage(1);
       await loadData();
       
       // Mostrar mensaje de éxito
@@ -733,7 +734,40 @@ export default function Instalaciones() {
             <FileDown className="h-4 w-4" />
             Exportar a Excel
           </Button>
-          <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+          <Button 
+            onClick={() => {
+              // Abrir en modo CREACIÓN: limpiar cualquier edición previa y resetear el formulario
+              setEditingItem(null);
+              setFormData({
+                fecha_instalacion: '',
+                id_tecnico: '',
+                id_operador: '',
+                direccion: '',
+                numero_ot: '',
+                producto_serie: '',
+                id_dr: '',
+                serie_dr: '',
+                eq_reutilizado: '',
+                eq_retirado: '',
+                id_tipo_orden: '',
+                metros_cable: '',
+                id_acometida: '',
+                observaciones: '',
+                valor_añadido: '',
+                valor_opcional_empresa: '',
+                valor_dr: '',
+                valor_orden: '',
+                valor_orden_empresa: '',
+                valor_dr_empresa: '',
+                total: '',
+                instalacion_compartida: '',
+                valor_total_empresa: '',
+                categoria: '',
+              });
+              setIsDialogOpen(true);
+            }}
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" />
             Nueva Instalación
           </Button>
@@ -1026,7 +1060,17 @@ export default function Instalaciones() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog 
+        open={isDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            // Al cerrar, limpiar estado y formulario
+            handleCloseDialog();
+          } else {
+            setIsDialogOpen(true);
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
