@@ -9,6 +9,7 @@ from rest_framework import filters
 from django.contrib.auth import authenticate
 from . import models
 from . import serializers
+from django.db.models import Exists, OuterRef
 
 # Configuración de paginación
 class StandardResultsSetPagination(PageNumberPagination):
@@ -326,6 +327,14 @@ class ProductosList(generics.ListCreateAPIView):
         id_tecnico = self.request.query_params.get('id_tecnico', None)
         if id_tecnico:
             queryset = queryset.filter(id_tecnico=id_tecnico)
+        
+        # Excluir productos cuya serie ya esté asignada en alguna instalación
+        include_assigned = self.request.query_params.get('include_assigned')
+        if not include_assigned:
+            assigned_subq = models.Instalaciones.objects.filter(
+                producto_serie=OuterRef('producto_serie')
+            )
+            queryset = queryset.annotate(is_assigned=Exists(assigned_subq)).filter(is_assigned=False)
         
         return queryset.order_by('-fecha_asignacion')
 
