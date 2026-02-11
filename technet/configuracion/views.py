@@ -65,7 +65,14 @@ class InstalacionesList(generics.ListCreateAPIView):
     search_fields = ['numero_ot', 'direccion', 'producto_serie__producto_serie']
     
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related(
+            'id_tecnico',
+            'id_operador',
+            'producto_serie',
+            'id_dr',
+            'id_tipo_orden',
+            'id_acometida',
+        )
         
         # Filtro por técnico
         id_tecnico = self.request.query_params.get('id_tecnico', None)
@@ -203,18 +210,21 @@ def instalaciones_bulk_import(request):
         
         created_count = 0
         errors = []
+
+        # Cache local para reducir consultas repetidas
+        productos_cache = {}
+        tecnico_default = models.Tecnicos.objects.first()
+        existing_numero_ot = set(models.Instalaciones.objects.values_list('numero_ot', flat=True))
         
         for idx, inst_data in enumerate(instalaciones_data):
             try:
-                # Manejar producto_serie - crear si no existe
+                # Manejar producto_serie - crear si no existe (con cache en memoria)
                 producto_serie_str = inst_data.get('producto_serie', 'NA')
-                
-                # Buscar o crear el producto
-                producto = models.Productos.objects.filter(producto_serie=producto_serie_str).first()
-                if not producto:
-                    # Crear un producto temporal si no existe
-                    tecnico_default = models.Tecnicos.objects.first()
-                    if tecnico_default:
+
+                producto = productos_cache.get(producto_serie_str)
+                if producto is None:
+                    producto = models.Productos.objects.filter(producto_serie=producto_serie_str).first()
+                    if not producto and tecnico_default:
                         producto = models.Productos.objects.create(
                             categoria=inst_data.get('categoria', 'NA'),
                             nombre_producto='Producto Importado',
@@ -223,21 +233,23 @@ def instalaciones_bulk_import(request):
                             id_tecnico=tecnico_default,
                             fecha_asignacion=inst_data.get('fecha_instalacion')
                         )
+                    productos_cache[producto_serie_str] = producto
                 
                 # Actualizar inst_data con el producto_serie correcto
                 inst_data['producto_serie'] = producto_serie_str if producto else 'NA'
                 
-                # Manejar duplicados de numero_ot - agregar sufijo si ya existe
+                # Manejar duplicados de numero_ot - agregar sufijo si ya existe (usando cache en memoria)
                 numero_ot_original = inst_data.get('numero_ot', 'NA')
                 numero_ot_final = numero_ot_original
                 contador = 1
                 
                 # Verificar si ya existe una instalación con este numero_ot
-                while models.Instalaciones.objects.filter(numero_ot=numero_ot_final).exists():
+                while numero_ot_final in existing_numero_ot:
                     numero_ot_final = f"{numero_ot_original}_DUP{contador}"
                     contador += 1
                 
                 inst_data['numero_ot'] = numero_ot_final
+                existing_numero_ot.add(numero_ot_final)
                 
                 # Validar y crear cada instalación
                 serializer = serializers.InstalacionesSerializers(data=inst_data)
@@ -321,7 +333,7 @@ class ProductosList(generics.ListCreateAPIView):
     search_fields = ['nombre_producto', 'producto_serie', 'categoria']
     
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('id_tecnico')
         
         # Filtro por técnico
         id_tecnico = self.request.query_params.get('id_tecnico', None)
