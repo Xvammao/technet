@@ -47,12 +47,5 @@ export default defineConfig({
   },
   build: {
     sourcemap: false, // Deshabilitar sourcemaps en producción por seguridad
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        drop_console: true, // Eliminar console.log en producción
-        drop_debugger: true,
-      },
-    },
   },
 });
