@@ -22,10 +22,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-em5&1+be1u_i1g&s6f97@6iw=yp1qtx89g3gqom73ypl)p_52%')
+SECRET_KEY = config('SECRET_KEY', default=None)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
+
+# Verificar que SECRET_KEY esté configurada
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY no está configurada. Por favor, configura la variable de entorno SECRET_KEY.")
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,.ngrok-free.app,.ngrok.io', cast=Csv())
 
@@ -52,7 +56,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -77,7 +81,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 
 # Permitir todos los orígenes en desarrollo (SOLO PARA DESARROLLO)
-CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=True, cast=bool)
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=DEBUG, cast=bool)
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -162,7 +166,7 @@ else:
             'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql_psycopg2'),
             'NAME': config('DB_NAME', default='telecomunicaciones'),
             'USER': config('DB_USER', default='postgres'),
-            'PASSWORD': config('DB_PASSWORD', default='Xvam135911'),
+            'PASSWORD': config('DB_PASSWORD', default=None),
             'HOST': config('DB_HOST', default='localhost'),
             'PORT': config('DB_PORT', default='5432'),
         }
@@ -215,16 +219,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Security settings for production
 if not DEBUG:
-    # SECURE_SSL_REDIRECT = True  # Deshabilitado para Railway
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Railway maneja SSL
+    SECURE_SSL_REDIRECT = False  # Railway maneja SSL
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    # SECURE_HSTS_SECONDS = 31536000  # Deshabilitado temporalmente
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
