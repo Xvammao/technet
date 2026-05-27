@@ -550,7 +550,7 @@ export default function Instalaciones() {
             }
           );
 
-          # Valores por defecto para campos requeridos - buscar "No definido"
+          // Valores por defecto para campos requeridos - buscar "No definido"
           const defaultDrObj = drs.find(d => d.nombre_dr.toLowerCase().includes('no definido')) || drs[0];
           const defaultAcometidaObj = acometidas.find(a => a.nombre_acometida.toLowerCase().includes('no definido')) || acometidas[0];
           
@@ -1215,7 +1215,7 @@ export default function Instalaciones() {
                 <Label htmlFor="id_tipo_orden">Tipo de Orden</Label>
                 <select
                   id="id_tipo_orden"
-                  value={formData.id_tipo_orden}
+                  value={formData.id_tipo_orden || ''}
                   onChange={(e) => handleTipoOrdenChange(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
