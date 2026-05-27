@@ -1219,7 +1219,7 @@ export default function Instalaciones() {
                   onChange={(e) => handleTipoOrdenChange(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="">Sin tipo de orden</option>
+                  <option value="">-- Sin selección --</option>
                   {tiposOrden
                     .filter((tipo) => tipo.nombre_orden && tipo.nombre_orden.trim() !== '')
                     .map((tipo) => (
