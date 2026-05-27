@@ -26,7 +26,8 @@ class InstalacionesSerializers (serializers.ModelSerializer):
     id_tipo_orden = serializers.PrimaryKeyRelatedField(
         queryset=models.Tipodeordenes.objects.all(),
         allow_null=True,
-        required=False
+        required=False,
+        default=None
     )
     
     class Meta:

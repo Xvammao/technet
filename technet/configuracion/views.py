@@ -261,17 +261,18 @@ def instalaciones_bulk_import(request):
                 inst_data['numero_ot'] = numero_ot_final
                 existing_numero_ot.add(numero_ot_final)
                 
+                # Forzar id_tipo_orden a None en importaciones desde Excel
+                inst_data['id_tipo_orden'] = None
+                inst_data['valor_orden'] = '0'
+                inst_data['valor_orden_empresa'] = '0'
+                
                 # Validar y crear cada instalación
                 serializer = serializers.InstalacionesSerializers(data=inst_data)
                 if serializer.is_valid():
                     # Usar el mismo método de creación que InstalacionesList
                     data = serializer.validated_data
                     
-                    # id_tipo_orden puede ser None (NULL) - al importar desde Excel siempre es NULL
-                    tipo_orden_id = data['id_tipo_orden'].id_tipo_orden if data.get('id_tipo_orden') else None
-                    valor_orden = data['id_tipo_orden'].valor_orden if data.get('id_tipo_orden') else 0
-                    valor_orden_empresa = data['id_tipo_orden'].valor_orden_empresa if data.get('id_tipo_orden') else 0
-                    
+                    # id_tipo_orden siempre es NULL en importaciones desde Excel
                     with connection.cursor() as cursor:
                         cursor.execute("""
                             INSERT INTO instalaciones (
@@ -279,7 +280,7 @@ def instalaciones_bulk_import(request):
                                 producto_serie, id_dr, eq_reutilizado, eq_retirado, id_tipo_orden,
                                 metros_cable, id_acometida, observaciones, valor_dr, valor_orden,
                                 valor_orden_empresa, valor_dr_empresa, serie_dr, categoria
-                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s, %s, %s, 0, 0, %s, %s, %s)
                             RETURNING id_instalacion
                         """, [
                             data['fecha_instalacion'],
@@ -291,13 +292,10 @@ def instalaciones_bulk_import(request):
                             data['id_dr'].id_dr,
                             data.get('eq_reutilizado', ''),
                             data.get('eq_retirado', ''),
-                            tipo_orden_id,
                             data['metros_cable'],
                             data['id_acometida'].id_acometida,
                             data.get('observaciones', ''),
                             data['valor_dr'],
-                            valor_orden,
-                            valor_orden_empresa,
                             data['valor_dr_empresa'],
                             data.get('serie_dr', ''),
                             data.get('categoria', '')
