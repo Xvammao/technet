@@ -174,7 +174,7 @@ class Instalaciones(models.Model):
     id_dr = models.ForeignKey(Dr, models.DO_NOTHING, db_column='id_dr')
     eq_reutilizado = models.CharField(blank=True, null=True)
     eq_retirado = models.CharField(blank=True, null=True)
-    id_tipo_orden = models.ForeignKey('Tipodeordenes', models.DO_NOTHING, db_column='id_tipo_orden')
+    id_tipo_orden = models.ForeignKey('Tipodeordenes', models.SET_NULL, db_column='id_tipo_orden', blank=True, null=True)
     metros_cable = models.DecimalField(max_digits=10, decimal_places=2)
     id_acometida = models.ForeignKey(Acometidas, models.DO_NOTHING, db_column='id_acometida')
     observaciones = models.TextField(blank=True, null=True)

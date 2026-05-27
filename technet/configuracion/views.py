@@ -100,6 +100,11 @@ class InstalacionesList(generics.ListCreateAPIView):
         # Usar SQL crudo para evitar problemas con campos generados
         data = serializer.validated_data
         
+        # id_tipo_orden puede ser None (NULL)
+        tipo_orden_id = data['id_tipo_orden'].id_tipo_orden if data.get('id_tipo_orden') else None
+        valor_orden = data['id_tipo_orden'].valor_orden if data.get('id_tipo_orden') else 0
+        valor_orden_empresa = data['id_tipo_orden'].valor_orden_empresa if data.get('id_tipo_orden') else 0
+        
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO instalaciones (
@@ -119,13 +124,13 @@ class InstalacionesList(generics.ListCreateAPIView):
                 data['id_dr'].id_dr,
                 data.get('eq_reutilizado', ''),
                 data.get('eq_retirado', ''),
-                data['id_tipo_orden'].id_tipo_orden,
+                tipo_orden_id,
                 data['metros_cable'],
                 data['id_acometida'].id_acometida,
                 data.get('observaciones', ''),
                 data['valor_dr'],
-                data['valor_orden'],
-                data['valor_orden_empresa'],
+                valor_orden,
+                valor_orden_empresa,
                 data['valor_dr_empresa'],
                 data.get('serie_dr', ''),
                 data.get('categoria', '')
@@ -143,6 +148,11 @@ class InstalacionesDetail(generics.RetrieveUpdateDestroyAPIView):
         # Usar SQL crudo para evitar problemas con campos generados
         data = serializer.validated_data
         instance = self.get_object()
+        
+        # id_tipo_orden puede ser None (NULL)
+        tipo_orden_id = data['id_tipo_orden'].id_tipo_orden if data.get('id_tipo_orden') else None
+        valor_orden = data['id_tipo_orden'].valor_orden if data.get('id_tipo_orden') else 0
+        valor_orden_empresa = data['id_tipo_orden'].valor_orden_empresa if data.get('id_tipo_orden') else 0
         
         with connection.cursor() as cursor:
             cursor.execute("""
@@ -177,13 +187,13 @@ class InstalacionesDetail(generics.RetrieveUpdateDestroyAPIView):
                 data['id_dr'].id_dr,
                 data.get('eq_reutilizado', ''),
                 data.get('eq_retirado', ''),
-                data['id_tipo_orden'].id_tipo_orden,
+                tipo_orden_id,
                 data['metros_cable'],
                 data['id_acometida'].id_acometida,
                 data.get('observaciones', ''),
                 data['valor_dr'],
-                data['valor_orden'],
-                data['valor_orden_empresa'],
+                valor_orden,
+                valor_orden_empresa,
                 data['valor_dr_empresa'],
                 data.get('serie_dr', ''),
                 data.get('categoria', ''),
@@ -257,6 +267,11 @@ def instalaciones_bulk_import(request):
                     # Usar el mismo método de creación que InstalacionesList
                     data = serializer.validated_data
                     
+                    # id_tipo_orden puede ser None (NULL) - al importar desde Excel siempre es NULL
+                    tipo_orden_id = data['id_tipo_orden'].id_tipo_orden if data.get('id_tipo_orden') else None
+                    valor_orden = data['id_tipo_orden'].valor_orden if data.get('id_tipo_orden') else 0
+                    valor_orden_empresa = data['id_tipo_orden'].valor_orden_empresa if data.get('id_tipo_orden') else 0
+                    
                     with connection.cursor() as cursor:
                         cursor.execute("""
                             INSERT INTO instalaciones (
@@ -276,13 +291,13 @@ def instalaciones_bulk_import(request):
                             data['id_dr'].id_dr,
                             data.get('eq_reutilizado', ''),
                             data.get('eq_retirado', ''),
-                            data['id_tipo_orden'].id_tipo_orden,
+                            tipo_orden_id,
                             data['metros_cable'],
                             data['id_acometida'].id_acometida,
                             data.get('observaciones', ''),
                             data['valor_dr'],
-                            data['valor_orden'],
-                            data['valor_orden_empresa'],
+                            valor_orden,
+                            valor_orden_empresa,
                             data['valor_dr_empresa'],
                             data.get('serie_dr', ''),
                             data.get('categoria', '')
@@ -377,6 +392,19 @@ class TipoOrdenLista(generics.ListCreateAPIView):
 class TipoOrdenEliminar(generics.RetrieveUpdateDestroyAPIView):
     queryset = models.Tipodeordenes.objects.all()
     serializer_class = serializers.TipoOrdenSerializers
+
+    def perform_destroy(self, instance):
+        # Antes de eliminar el tipo de orden, poner en NULL las instalaciones que lo referencian
+        # y resetear valor_orden / valor_orden_empresa a 0
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE instalaciones
+                SET id_tipo_orden = NULL,
+                    valor_orden = 0,
+                    valor_orden_empresa = 0
+                WHERE id_tipo_orden = %s
+            """, [instance.id_tipo_orden])
+        instance.delete()
 
 # Vista de Login personalizada
 class CustomAuthToken(ObtainAuthToken):

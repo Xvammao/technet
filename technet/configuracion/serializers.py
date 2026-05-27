@@ -22,6 +22,12 @@ class InstalacionesSerializers (serializers.ModelSerializer):
     total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True, required=False)
     instalacion_compartida = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True, required=False)
     valor_total_empresa = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True, required=False)
+    # id_tipo_orden es opcional (puede ser NULL)
+    id_tipo_orden = serializers.PrimaryKeyRelatedField(
+        queryset=models.Tipodeordenes.objects.all(),
+        allow_null=True,
+        required=False
+    )
     
     class Meta:
         model = models.Instalaciones

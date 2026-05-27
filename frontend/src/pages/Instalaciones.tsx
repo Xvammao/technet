@@ -176,6 +176,16 @@ export default function Instalaciones() {
 
   // Función para actualizar valores cuando cambia el tipo de orden
   const handleTipoOrdenChange = (tipoOrdenId: string) => {
+    if (!tipoOrdenId) {
+      // Si se selecciona "Sin tipo de orden", limpiar valores a 0
+      setFormData({
+        ...formData,
+        id_tipo_orden: '',
+        valor_orden: '0',
+        valor_orden_empresa: '0',
+      });
+      return;
+    }
     const tipoOrden = tiposOrden.find(t => t.id_tipo_orden.toString() === tipoOrdenId);
     if (tipoOrden) {
       setFormData({
@@ -206,13 +216,21 @@ export default function Instalaciones() {
       // Eliminar campos calculados/generados antes de enviar
       const { total, instalacion_compartida, valor_total_empresa, valor_añadido, valor_opcional_empresa, ...dataToSend } = formData;
       
-      console.log('Datos a enviar:', dataToSend);
+      // Si id_tipo_orden está vacío, enviarlo como null y asegurar valores en 0
+      const finalData: any = { ...dataToSend };
+      if (!finalData.id_tipo_orden) {
+        finalData.id_tipo_orden = null;
+        finalData.valor_orden = '0';
+        finalData.valor_orden_empresa = '0';
+      }
+      
+      console.log('Datos a enviar:', finalData);
       
       if (editingItem) {
-        await api.put(`${endpoints.instalaciones}${editingItem.id_instalacion}/`, dataToSend);
+        await api.put(`${endpoints.instalaciones}${editingItem.id_instalacion}/`, finalData);
         console.log('Instalación actualizada exitosamente');
       } else {
-        await api.post(endpoints.instalaciones, dataToSend);
+        await api.post(endpoints.instalaciones, finalData);
         console.log('Instalación creada exitosamente');
       }
       
@@ -266,7 +284,7 @@ export default function Instalaciones() {
       serie_dr: item.serie_dr || '',
       eq_reutilizado: item.eq_reutilizado || '',
       eq_retirado: item.eq_retirado || '',
-      id_tipo_orden: item.id_tipo_orden.toString(),
+      id_tipo_orden: item.id_tipo_orden != null ? item.id_tipo_orden.toString() : '',
       metros_cable: item.metros_cable,
       id_acometida: item.id_acometida.toString(),
       observaciones: item.observaciones || '',
@@ -512,13 +530,11 @@ export default function Instalaciones() {
             }
           );
 
-          // Valores por defecto para campos requeridos - buscar "No definido"
+          # Valores por defecto para campos requeridos - buscar "No definido"
           const defaultDrObj = drs.find(d => d.nombre_dr.toLowerCase().includes('no definido')) || drs[0];
-          const defaultTipoOrdenObj = tiposOrden.find(t => t.nombre_orden.toLowerCase().includes('no definido')) || tiposOrden[0];
           const defaultAcometidaObj = acometidas.find(a => a.nombre_acometida.toLowerCase().includes('no definido')) || acometidas[0];
           
           const defaultDr = defaultDrObj?.id_dr || 1;
-          const defaultTipoOrden = defaultTipoOrdenObj?.id_tipo_orden || 1;
           const defaultAcometida = defaultAcometidaObj?.id_acometida || 1;
 
           // Parsear fecha o usar fecha actual si no hay
@@ -537,13 +553,13 @@ export default function Instalaciones() {
             serie_dr: '',                                               // serie_dr vacío (no viene del Excel)
             eq_reutilizado: 'NA',
             eq_retirado: 'NA',
-            id_tipo_orden: defaultTipoOrden,
+            // id_tipo_orden se deja en blanco (null) al importar desde Excel
             metros_cable: '0',
             id_acometida: defaultAcometida,
             observaciones: String(descripcionValue || 'NA'),           // Descripción → observaciones
             valor_dr: defaultDrObj?.valor_dr || '0',
-            valor_orden: defaultTipoOrdenObj?.valor_orden || '0',
-            valor_orden_empresa: defaultTipoOrdenObj?.valor_orden_empresa || '0',
+            valor_orden: '0',
+            valor_orden_empresa: '0',
             valor_dr_empresa: defaultDrObj?.valor_dr_empresa || '0',
           };
 
@@ -1182,9 +1198,8 @@ export default function Instalaciones() {
                   value={formData.id_tipo_orden}
                   onChange={(e) => handleTipoOrdenChange(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
                 >
-                  <option value="">Seleccionar...</option>
+                  <option value="">Sin tipo de orden</option>
                   {tiposOrden.map((tipo) => (
                     <option key={tipo.id_tipo_orden} value={tipo.id_tipo_orden}>
                       {tipo.nombre_orden}
