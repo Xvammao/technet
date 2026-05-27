@@ -187,14 +187,22 @@ export default function Instalaciones() {
       return;
     }
     const tipoOrden = tiposOrden.find(t => t.id_tipo_orden.toString() === tipoOrdenId);
-    if (tipoOrden) {
+    // Si el tipo tiene nombre vacío, tratarlo como "sin tipo de orden"
+    if (!tipoOrden || !tipoOrden.nombre_orden || tipoOrden.nombre_orden.trim() === '') {
       setFormData({
         ...formData,
-        id_tipo_orden: tipoOrdenId,
-        valor_orden: tipoOrden.valor_orden,
-        valor_orden_empresa: tipoOrden.valor_orden_empresa,
+        id_tipo_orden: '',
+        valor_orden: '0',
+        valor_orden_empresa: '0',
       });
+      return;
     }
+    setFormData({
+      ...formData,
+      id_tipo_orden: tipoOrdenId,
+      valor_orden: tipoOrden.valor_orden,
+      valor_orden_empresa: tipoOrden.valor_orden_empresa,
+    });
   };
 
   // Función para actualizar valores cuando cambia el DR
@@ -273,6 +281,16 @@ export default function Instalaciones() {
 
   const handleEdit = (item: Instalacion) => {
     setEditingItem(item);
+
+    // Verificar si el tipo de orden tiene nombre válido (no vacío)
+    const tipoOrdenValido = item.id_tipo_orden != null
+      ? tiposOrden.find(
+          t => t.id_tipo_orden === item.id_tipo_orden &&
+               t.nombre_orden &&
+               t.nombre_orden.trim() !== ''
+        )
+      : null;
+
     setFormData({
       fecha_instalacion: item.fecha_instalacion,
       id_tecnico: item.id_tecnico.toString(),
@@ -284,15 +302,17 @@ export default function Instalaciones() {
       serie_dr: item.serie_dr || '',
       eq_reutilizado: item.eq_reutilizado || '',
       eq_retirado: item.eq_retirado || '',
-      id_tipo_orden: item.id_tipo_orden != null ? item.id_tipo_orden.toString() : '',
+      // Si el tipo de orden tiene nombre vacío, tratarlo como "sin tipo de orden"
+      id_tipo_orden: tipoOrdenValido ? item.id_tipo_orden!.toString() : '',
       metros_cable: item.metros_cable,
       id_acometida: item.id_acometida.toString(),
       observaciones: item.observaciones || '',
       valor_añadido: item.valor_añadido || '',
       valor_opcional_empresa: item.valor_opcional_empresa || '',
       valor_dr: item.valor_dr,
-      valor_orden: item.valor_orden,
-      valor_orden_empresa: item.valor_orden_empresa,
+      // Si no hay tipo de orden válido, forzar valores a 0
+      valor_orden: tipoOrdenValido ? item.valor_orden : '0',
+      valor_orden_empresa: tipoOrdenValido ? item.valor_orden_empresa : '0',
       valor_dr_empresa: item.valor_dr_empresa,
       total: item.total || '',
       instalacion_compartida: item.instalacion_compartida || '',
@@ -1200,11 +1220,13 @@ export default function Instalaciones() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="">Sin tipo de orden</option>
-                  {tiposOrden.map((tipo) => (
-                    <option key={tipo.id_tipo_orden} value={tipo.id_tipo_orden}>
-                      {tipo.nombre_orden}
-                    </option>
-                  ))}
+                  {tiposOrden
+                    .filter((tipo) => tipo.nombre_orden && tipo.nombre_orden.trim() !== '')
+                    .map((tipo) => (
+                      <option key={tipo.id_tipo_orden} value={tipo.id_tipo_orden}>
+                        {tipo.nombre_orden}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="space-y-2">
