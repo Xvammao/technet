@@ -27,9 +27,13 @@ COPY . .
 # Create staticfiles directory
 RUN mkdir -p /app/staticfiles
 
-# Collect static files before starting
-RUN python manage.py collectstatic --noinput 2>/dev/null || true
+# NOTE: collectstatic is intentionally NOT run at build time. It needs SECRET_KEY /
+# DATABASE_URL, which Railway only injects at runtime (not during the Docker build),
+# so running it here used to fail silently (errors were hidden by "2>/dev/null || true")
+# and no static files were ever collected. It now runs at container startup instead,
+# where the real environment variables are available. Do not add "|| true" back here -
+# if this step fails, the deploy logs will actually show why.
 
-# Run migrations and start server using shell to expand PORT variable
+# Run collectstatic, migrations and start server using shell to expand PORT variable
 ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["python manage.py migrate --noinput && gunicorn technet.wsgi --log-file - --bind 0.0.0.0:${PORT:-8000}"]
+CMD ["python manage.py collectstatic --noinput && python manage.py migrate --noinput && gunicorn technet.wsgi --log-file - --bind 0.0.0.0:${PORT:-8000}"]

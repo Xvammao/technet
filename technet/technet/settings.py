@@ -31,7 +31,11 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY no está configurada. Por favor, configura la variable de entorno SECRET_KEY.")
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,.ngrok-free.app,.ngrok.io', cast=Csv())
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,.ngrok-free.app,.ngrok.io,.railway.app,.up.railway.app',
+    cast=Csv()
+)
 
 
 # Application definition
@@ -72,12 +76,14 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv()
 )
 
-# Permitir todos los orígenes de ngrok (HTTP y HTTPS)
+# Permitir todos los orígenes de ngrok y Railway (HTTP y HTTPS)
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.ngrok-free\.app$",
     r"^https://.*\.ngrok\.io$",
     r"^http://.*\.ngrok-free\.app$",
     r"^http://.*\.ngrok\.io$",
+    r"^https://.*\.railway\.app$",
+    r"^https://.*\.up\.railway\.app$",
 ]
 
 # Permitir todos los orígenes en desarrollo (SOLO PARA DESARROLLO)
