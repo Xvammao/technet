@@ -1,0 +1,6 @@
+{
+  "build": {
+    "builder": "dockerfile",
+    "buildCommand": "docker build -t technet:latest ."
+  }
+}
