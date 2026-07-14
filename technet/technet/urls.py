@@ -5,6 +5,6 @@ from configuracion.views import CustomAuthToken
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('technet/', include('configuracion.urls')),
+    path('', include('configuracion.urls')),
     path('token/login/', CustomAuthToken.as_view(), name='api_token_auth'),
 ]

@@ -17,7 +17,7 @@ const getBaseURL = () => {
 };
 
 const api = axios.create({
-  baseURL: getBaseURL() + '/technet',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
