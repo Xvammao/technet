@@ -1,6 +1,9 @@
 {
   "build": {
     "builder": "dockerfile",
-    "buildCommand": "docker build -t technet:latest ."
+    "dockerfilePath": "Dockerfile"
+  },
+  "start": {
+    "cmd": "python manage.py migrate --noinput && gunicorn technet.wsgi --log-file - --bind 0.0.0.0:${PORT:-8000}"
   }
 }

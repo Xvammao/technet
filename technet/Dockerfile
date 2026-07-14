@@ -24,8 +24,17 @@ RUN pip install --upgrade pip && \
 # Copy project
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput || true
+# Collect static files (non-interactive, don't fail if it errors)
+RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
-# Run migrations and start server
-CMD ["gunicorn", "technet.wsgi", "--log-file", "-", "--bind", "0.0.0.0:${PORT:-8000}"]
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Running database migrations..."\n\
+python manage.py migrate --noinput\n\
+echo "Starting Gunicorn server..."\n\
+exec gunicorn technet.wsgi --log-file - --bind 0.0.0.0:${PORT:-8000}' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+# Use shell form to allow variable expansion
+CMD ["/bin/sh", "-c", "python manage.py migrate --noinput && gunicorn technet.wsgi --log-file - --bind 0.0.0.0:${PORT:-8000}"]
