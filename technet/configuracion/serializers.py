@@ -57,6 +57,16 @@ class ProductosSerializers (serializers.ModelSerializer):
     class Meta:
         model = models.Productos
         fields = '__all__'
+    
+    def validate(self, data):
+        """
+        Validar que id_operador sea proporcionado (obligatorio)
+        """
+        if not data.get('id_operador'):
+            raise serializers.ValidationError(
+                {"id_operador": "El operador es obligatorio para importar productos."}
+            )
+        return data
 
 class TecnicosSerializers (serializers.ModelSerializer):
     class Meta:

@@ -211,6 +211,7 @@ class Productos(models.Model):
     producto_serie = models.CharField(unique=True, max_length=100)
     cantidad = models.IntegerField()
     id_tecnico = models.ForeignKey('Tecnicos', models.DO_NOTHING, db_column='id_tecnico')
+    id_operador = models.ForeignKey('Operadores', models.DO_NOTHING, db_column='id_operador', blank=True, null=True)
     fecha_asignacion = models.DateField()
 
     class Meta:

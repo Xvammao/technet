@@ -57,6 +57,7 @@ export interface Producto {
   producto_serie: string;
   cantidad: number;
   id_tecnico: number;
+  id_operador?: number;
   fecha_asignacion: string;
 }
 

@@ -1,9 +1,17 @@
-import { useEffect, useState, useRef } from 'react';
-import { Plus, Edit, Trash2, Search, FileDown, Package, Upload } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { useEffect, useState, useRef } from "react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  FileDown,
+  Package,
+  Upload,
+} from "lucide-react";
+import * as XLSX from "xlsx";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -11,41 +19,45 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Pagination } from '@/components/ui/pagination';
-import api, { endpoints } from '@/lib/api';
-import { Producto, Tecnico } from '@/types';
-import { exportToExcel, formatDateForExcel } from '@/lib/exportToExcel';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Pagination } from "@/components/ui/pagination";
+import api, { endpoints } from "@/lib/api";
+import { Producto, Tecnico, Operador } from "@/types";
+import { exportToExcel, formatDateForExcel } from "@/lib/exportToExcel";
 
 export default function Productos() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterTecnico, setFilterTecnico] = useState('');
+  const [operadores, setOperadores] = useState<Operador[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterTecnico, setFilterTecnico] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Producto | null>(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [selectedOperador, setSelectedOperador] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    categoria: '',
-    nombre_producto: '',
-    producto_serie: '',
-    cantidad: '',
-    id_tecnico: '',
-    fecha_asignacion: '',
+    categoria: "",
+    nombre_producto: "",
+    producto_serie: "",
+    cantidad: "",
+    id_tecnico: "",
+    id_operador: "",
+    fecha_asignacion: "",
   });
 
   useEffect(() => {
@@ -61,18 +73,21 @@ export default function Productos() {
       if (filterTecnico) {
         params.id_tecnico = filterTecnico;
       }
-      const [prodRes, tecRes] = await Promise.all([
+      const [prodRes, tecRes, opRes] = await Promise.all([
         api.get(endpoints.productos, { params }),
         api.get(endpoints.tecnicos, { params: { page_size: 1000 } }),
+        api.get(endpoints.operadores, { params: { page_size: 1000 } }),
       ]);
       setProductos(prodRes.data.results || []);
       setTotalCount(prodRes.data.count || 0);
       setTotalPages(Math.ceil((prodRes.data.count || 0) / 20));
       setTecnicos(tecRes.data.results || tecRes.data || []);
+      setOperadores(opRes.data.results || opRes.data || []);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
       setProductos([]);
       setTecnicos([]);
+      setOperadores([]);
     } finally {
       setLoading(false);
     }
@@ -82,24 +97,27 @@ export default function Productos() {
     e.preventDefault();
     try {
       if (editingItem) {
-        await api.put(`${endpoints.productos}${editingItem.id_producto}/`, formData);
+        await api.put(
+          `${endpoints.productos}${editingItem.id_producto}/`,
+          formData,
+        );
       } else {
         await api.post(endpoints.productos, formData);
       }
       loadData();
       handleCloseDialog();
     } catch (error) {
-      console.error('Error saving producto:', error);
+      console.error("Error saving producto:", error);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Está seguro de eliminar este producto?')) {
+    if (window.confirm("¿Está seguro de eliminar este producto?")) {
       try {
         await api.delete(`${endpoints.productos}${id}/`);
         loadData();
       } catch (error) {
-        console.error('Error deleting producto:', error);
+        console.error("Error deleting producto:", error);
       }
     }
   };
@@ -112,6 +130,7 @@ export default function Productos() {
       producto_serie: item.producto_serie,
       cantidad: item.cantidad.toString(),
       id_tecnico: item.id_tecnico.toString(),
+      id_operador: item.id_operador ? item.id_operador.toString() : "",
       fecha_asignacion: item.fecha_asignacion,
     });
     setIsDialogOpen(true);
@@ -121,12 +140,13 @@ export default function Productos() {
     setIsDialogOpen(false);
     setEditingItem(null);
     setFormData({
-      categoria: '',
-      nombre_producto: '',
-      producto_serie: '',
-      cantidad: '',
-      id_tecnico: '',
-      fecha_asignacion: '',
+      categoria: "",
+      nombre_producto: "",
+      producto_serie: "",
+      cantidad: "",
+      id_tecnico: "",
+      id_operador: "",
+      fecha_asignacion: "",
     });
   };
 
@@ -136,33 +156,39 @@ export default function Productos() {
       const params: any = { page_size: 50000 };
       if (searchTerm) params.search = searchTerm;
       if (filterTecnico) params.id_tecnico = filterTecnico;
-      
+
       const response = await api.get<{ results: Producto[] }>(
         endpoints.productos,
-        { params }
+        { params },
       );
-      
+
       const allProductos = response.data.results || response.data;
-      
+
       console.log(`Exportando ${allProductos.length} productos`);
-      
+
       const dataToExport = allProductos.map((prod: Producto) => {
-        const tecnico = tecnicos.find(t => t.id_unico_tecnico === prod.id_tecnico);
+        const tecnico = tecnicos.find(
+          (t) => t.id_unico_tecnico === prod.id_tecnico,
+        );
+        const operador = operadores.find(
+          (o) => o.id_ope === prod.id_operador,
+        );
         return {
-          'Categoría': prod.categoria,
-          'Nombre': prod.nombre_producto,
-          'Serie': prod.producto_serie,
-          'Cantidad': prod.cantidad,
-          'Técnico': tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-',
-          'Fecha Asignación': formatDateForExcel(prod.fecha_asignacion),
+          Categoría: prod.categoria,
+          Nombre: prod.nombre_producto,
+          Serie: prod.producto_serie,
+          Cantidad: prod.cantidad,
+          Técnico: tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : "-",
+          Operador: operador ? operador.nombre_operador : "-",
+          "Fecha Asignación": formatDateForExcel(prod.fecha_asignacion),
         };
       });
 
-      const filename = `Productos_${new Date().toLocaleDateString('es-CO').replace(/\//g, '-')}`;
-      exportToExcel(dataToExport, filename, 'Productos');
+      const filename = `Productos_${new Date().toLocaleDateString("es-CO").replace(/\//g, "-")}`;
+      exportToExcel(dataToExport, filename, "Productos");
     } catch (error) {
-      console.error('Error al exportar:', error);
-      alert('Error al exportar los datos');
+      console.error("Error al exportar:", error);
+      alert("Error al exportar los datos");
     }
   };
 
@@ -173,7 +199,7 @@ export default function Productos() {
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !selectedOperador) return;
 
     setImporting(true);
     try {
@@ -183,9 +209,11 @@ export default function Productos() {
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
       // Buscar o crear técnico "Stock"
-      let tecnicoStock = tecnicos.find(t => 
-        t.nombre.toLowerCase() === 'stock' || 
-        (t.nombre.toLowerCase() === 'stock' && t.apellido.toLowerCase() === 'stock')
+      let tecnicoStock = tecnicos.find(
+        (t) =>
+          t.nombre.toLowerCase() === "stock" ||
+          (t.nombre.toLowerCase() === "stock" &&
+            t.apellido.toLowerCase() === "stock"),
       );
 
       let idTecnicoStock: number;
@@ -194,14 +222,16 @@ export default function Productos() {
         // Crear técnico Stock si no existe
         try {
           const response = await api.post(endpoints.tecnicos, {
-            nombre: 'Stock',
-            apellido: 'Stock',
-            id_tecnico: 'STOCK001'
+            nombre: "Stock",
+            apellido: "Stock",
+            id_tecnico: "STOCK001",
           });
           idTecnicoStock = response.data.id_unico_tecnico;
         } catch (error) {
-          console.error('Error creando técnico Stock:', error);
-          alert('Error al crear el técnico Stock. Por favor, créalo manualmente.');
+          console.error("Error creando técnico Stock:", error);
+          alert(
+            "Error al crear el técnico Stock. Por favor, créalo manualmente.",
+          );
           setImporting(false);
           return;
         }
@@ -210,15 +240,17 @@ export default function Productos() {
       }
 
       // Fecha actual en formato YYYY-MM-DD
-      const fechaActual = new Date().toISOString().split('T')[0];
+      const fechaActual = new Date().toISOString().split("T")[0];
 
-      // Mapear y crear productos
+      // Mapear y crear productos con el operador seleccionado
       const productosImportados = jsonData.map((row) => ({
-        categoria: row['Categoria'] || row['Categoría'] || '',
-        nombre_producto: row['Descripcion'] || row['Descripción'] || '',
-        producto_serie: row['Nº serie'] || row['Nu serie'] || row['N° serie'] || '',
-        cantidad: parseInt(row['Cantidad'] || '0'),
+        categoria: row["Categoria"] || row["Categoría"] || "",
+        nombre_producto: row["Descripcion"] || row["Descripción"] || "",
+        producto_serie:
+          row["Nº serie"] || row["Nu serie"] || row["N° serie"] || "",
+        cantidad: parseInt(row["Cantidad"] || "0"),
         id_tecnico: idTecnicoStock,
+        id_operador: parseInt(selectedOperador),
         fecha_asignacion: fechaActual,
       }));
 
@@ -231,24 +263,27 @@ export default function Productos() {
           await api.post(endpoints.productos, producto);
           exitosos++;
         } catch (error) {
-          console.error('Error importando producto:', producto, error);
+          console.error("Error importando producto:", producto, error);
           fallidos++;
         }
       }
 
-      alert(`Importación completada:\n✓ ${exitosos} productos importados\n✗ ${fallidos} productos fallidos`);
+      alert(
+        `Importación completada:\n✓ ${exitosos} productos importados\n✗ ${fallidos} productos fallidos`,
+      );
+      setIsImportDialogOpen(false);
+      setSelectedOperador("");
       loadData();
     } catch (error) {
-      console.error('Error procesando archivo Excel:', error);
-      alert('Error al procesar el archivo Excel. Verifica el formato.');
+      console.error("Error procesando archivo Excel:", error);
+      alert("Error al procesar el archivo Excel. Verifica el formato.");
     } finally {
       setImporting(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
-
 
   if (loading) {
     return (
@@ -262,20 +297,22 @@ export default function Productos() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Productos</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Productos
+          </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
             Gestión de inventario de productos
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => fileInputRef.current?.click()} 
-            variant="outline" 
+          <Button
+            onClick={() => setIsImportDialogOpen(true)}
+            variant="outline"
             className="gap-2"
             disabled={importing}
           >
             <Upload className="h-4 w-4" />
-            {importing ? 'Importando...' : 'Importar Excel'}
+            {importing ? "Importando..." : "Importar Excel"}
           </Button>
           <input
             ref={fileInputRef}
@@ -284,7 +321,11 @@ export default function Productos() {
             onChange={handleImportExcel}
             className="hidden"
           />
-          <Button onClick={handleExportToExcel} variant="outline" className="gap-2">
+          <Button
+            onClick={handleExportToExcel}
+            variant="outline"
+            className="gap-2"
+          >
             <FileDown className="h-4 w-4" />
             Exportar a Excel
           </Button>
@@ -307,10 +348,12 @@ export default function Productos() {
                 className="pl-10"
               />
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Técnico</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Técnico
+                </label>
                 <select
                   value={filterTecnico}
                   onChange={(e) => {
@@ -321,20 +364,23 @@ export default function Productos() {
                 >
                   <option value="">Todos</option>
                   {tecnicos.map((tec) => (
-                    <option key={tec.id_unico_tecnico} value={tec.id_unico_tecnico}>
+                    <option
+                      key={tec.id_unico_tecnico}
+                      value={tec.id_unico_tecnico}
+                    >
                       {tec.nombre} {tec.apellido}
                     </option>
                   ))}
                 </select>
               </div>
-              
+
               {filterTecnico && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setFilterTecnico('');
-                    setSearchTerm('');
+                    setFilterTecnico("");
+                    setSearchTerm("");
                     setCurrentPage(1);
                   }}
                   className="mt-6"
@@ -343,7 +389,7 @@ export default function Productos() {
                 </Button>
               )}
             </div>
-            
+
             <div className="text-sm text-slate-600 dark:text-slate-400">
               Mostrando {totalCount} productos
             </div>
@@ -358,13 +404,19 @@ export default function Productos() {
                 <TableHead>Serie</TableHead>
                 <TableHead>Cantidad</TableHead>
                 <TableHead>Técnico</TableHead>
+                <TableHead>Operador</TableHead>
                 <TableHead>Fecha Asignación</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {productos.map((producto) => {
-                const tecnico = tecnicos.find(t => t.id_unico_tecnico === producto.id_tecnico);
+                const tecnico = tecnicos.find(
+                  (t) => t.id_unico_tecnico === producto.id_tecnico,
+                );
+                const operador = operadores.find(
+                  (o) => o.id_ope === producto.id_operador,
+                );
                 return (
                   <TableRow key={producto.id_producto}>
                     <TableCell>
@@ -373,24 +425,33 @@ export default function Productos() {
                         {producto.categoria}
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{producto.nombre_producto}</TableCell>
+                    <TableCell className="font-medium">
+                      {producto.nombre_producto}
+                    </TableCell>
                     <TableCell>{producto.producto_serie}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        producto.cantidad > 10 
-                          ? 'bg-green-100 text-green-700' 
-                          : producto.cantidad > 0 
-                          ? 'bg-yellow-100 text-yellow-700' 
-                          : 'bg-red-100 text-red-700'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          producto.cantidad > 10
+                            ? "bg-green-100 text-green-700"
+                            : producto.cantidad > 0
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                        }`}
+                      >
                         {producto.cantidad}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : '-'}
+                      {tecnico ? `${tecnico.nombre} ${tecnico.apellido}` : "-"}
                     </TableCell>
                     <TableCell>
-                      {new Date(producto.fecha_asignacion).toLocaleDateString('es-CO')}
+                      {operador ? operador.nombre_operador : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(producto.fecha_asignacion).toLocaleDateString(
+                        "es-CO",
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -429,7 +490,7 @@ export default function Productos() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingItem ? 'Editar Producto' : 'Nuevo Producto'}
+              {editingItem ? "Editar Producto" : "Nuevo Producto"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -491,8 +552,30 @@ export default function Productos() {
               >
                 <option value="">Seleccionar...</option>
                 {tecnicos.map((tec) => (
-                  <option key={tec.id_unico_tecnico} value={tec.id_unico_tecnico}>
+                  <option
+                    key={tec.id_unico_tecnico}
+                    value={tec.id_unico_tecnico}
+                  >
                     {tec.nombre} {tec.apellido}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="id_operador">Operador Asignado</Label>
+              <select
+                id="id_operador"
+                value={formData.id_operador}
+                onChange={(e) =>
+                  setFormData({ ...formData, id_operador: e.target.value })
+                }
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                required
+              >
+                <option value="">Seleccionar...</option>
+                {operadores.map((op) => (
+                  <option key={op.id_ope} value={op.id_ope}>
+                    {op.nombre_operador}
                   </option>
                 ))}
               </select>
@@ -510,16 +593,73 @@ export default function Productos() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseDialog}
+              >
                 Cancelar
               </Button>
               <Button type="submit">
-                {editingItem ? 'Actualizar' : 'Crear'}
+                {editingItem ? "Actualizar" : "Crear"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Seleccionar Operador para Importación</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Selecciona el operador que realizará la importación de productos.
+              Este operador será asignado a todos los productos importados.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="operador_select">Operador</Label>
+              <select
+                id="operador_select"
+                value={selectedOperador}
+                onChange={(e) => setSelectedOperador(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950"
+              >
+                <option value="">Seleccionar un operador...</option>
+                {operadores.map((op) => (
+                  <option key={op.id_ope} value={op.id_ope}>
+                    {op.nombre_operador}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsImportDialogOpen(false);
+                  setSelectedOperador("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedOperador) {
+                    fileInputRef.current?.click();
+                  }
+                }}
+                disabled={!selectedOperador}
+              >
+                Continuar
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
